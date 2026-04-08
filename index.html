@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>웹툰 PD 매니저</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<style>
+:root{
+  --bg:#F7F5F0;
+  --surface:#FFFFFF;
+  --surface2:#F0EDE8;
+  --border:#E2DDD6;
+  --border2:#CCC8C0;
+  --text:#1A1714;
+  --text2:#6B6560;
+  --text3:#A09A93;
+  --accent:#2D5A3D;
+  --accent-light:#EAF2EC;
+  --accent-text:#1A3D26;
+  --red:#C0392B;
+  --red-light:#FAEAEA;
+  --amber:#B8620A;
+  --amber-light:#FDF3E7;
+  --blue:#1A4A7A;
+  --blue-light:#EAF0F8;
+  --radius:10px;
+  --radius-lg:14px;
+  --shadow:0 1px 3px rgba(0,0,0,0.06), 0 4px 16px rgba(0,0,0,0.04);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px;line-height:1.6}
+
+/* 동기화 상태 표시 */
+.sync-bar{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;padding:6px 10px;margin-top:4px}
+.sync-dot{width:7px;height:7px;border-radius:50%;background:var(--border2);flex-shrink:0;transition:background 0.3s}
+.sync-dot.connected{background:#2D8A52}
+.sync-dot.syncing{background:var(--amber);animation:pulse 1s infinite}
+.sync-dot.error{background:var(--red)}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+
+/* 로딩 오버레이 */
+.loading-overlay{position:fixed;inset:0;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:200;gap:14px;transition:opacity 0.3s}
+.loading-overlay.hidden{opacity:0;pointer-events:none}
+.loading-spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-text{font-size:13px;color:var(--text3)}
+
+/* 레이아웃 */
+.layout{display:flex;min-height:100vh}
+.sidebar{width:220px;background:var(--surface);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;height:100vh;z-index:10}
+.main{margin-left:220px;flex:1;padding:32px 36px;max-width:calc(100vw - 220px)}
+
+/* 사이드바 */
+.sidebar-logo{padding:24px 20px 16px;border-bottom:1px solid var(--border)}
+.sidebar-logo h1{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.02em}
+.sidebar-logo p{font-size:11px;color:var(--text3);margin-top:2px;font-family:'DM Mono',monospace}
+.sidebar-nav{padding:12px 10px;flex:1;overflow-y:auto}
+.nav-label{font-size:10px;font-weight:700;color:var(--text3);letter-spacing:0.08em;padding:8px 10px 4px;text-transform:uppercase}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);cursor:pointer;color:var(--text2);font-size:13px;transition:all 0.15s;border:none;background:none;width:100%;text-align:left}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:var(--accent-light);color:var(--accent-text);font-weight:500}
+.nav-icon{width:18px;height:18px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+.sidebar-footer{padding:16px 20px;border-top:1px solid var(--border)}
+.today-label{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace}
+.today-date{font-size:13px;font-weight:500;color:var(--text);margin-top:2px}
+
+/* 헤더 */
+.page-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:28px;gap:16px;flex-wrap:wrap}
+.page-title{font-size:22px;font-weight:700;color:var(--text);letter-spacing:-0.03em}
+.page-subtitle{font-size:13px;color:var(--text3);margin-top:3px}
+.header-actions{display:flex;gap:8px;flex-shrink:0}
+
+/* 버튼 */
+.btn{font-size:13px;padding:8px 16px;border-radius:var(--radius);border:1px solid var(--border2);background:var(--surface);color:var(--text);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s;white-space:nowrap}
+.btn:hover{background:var(--surface2);border-color:var(--border2)}
+.btn-primary{background:var(--accent);color:#fff;border-color:var(--accent)}
+.btn-primary:hover{background:#234832;border-color:#234832}
+.btn-danger{background:var(--red-light);color:var(--red);border-color:#F0C0BC}
+.btn-danger:hover{background:#F5D5D2}
+.btn-sm{font-size:12px;padding:5px 12px}
+
+/* 요약 카드 */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:28px}
+.metric-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow)}
+.metric-label{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:8px}
+.metric-value{font-size:28px;font-weight:700;font-family:'DM Mono',monospace;letter-spacing:-0.03em;color:var(--text)}
+.metric-value.red{color:var(--red)}
+.metric-value.amber{color:var(--amber)}
+.metric-value.green{color:var(--accent)}
+.metric-sub{font-size:11px;color:var(--text3);margin-top:4px}
+
+/* 필터 바 */
+.filter-section{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+.filter-group{display:flex;gap:4px;background:var(--surface2);border-radius:var(--radius);padding:3px}
+.filter-btn{font-size:12px;padding:5px 12px;border-radius:8px;border:none;background:transparent;color:var(--text2);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s;white-space:nowrap}
+.filter-btn.active{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,0.08)}
+.filter-divider{width:1px;height:20px;background:var(--border);margin:0 4px;align-self:center}
+.type-filter{font-size:12px;padding:5px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);color:var(--text2);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s}
+.type-filter.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent-text)}
+
+/* 작품 카드 */
+.work-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);margin-bottom:14px;box-shadow:var(--shadow);overflow:hidden;transition:box-shadow 0.15s}
+.work-card:hover{box-shadow:0 2px 8px rgba(0,0,0,0.08),0 8px 24px rgba(0,0,0,0.06)}
+.work-card.urgent{border-left:4px solid var(--red)}
+.work-card.warning{border-left:4px solid #E5942A}
+.work-header{display:flex;align-items:center;gap:12px;padding:16px 20px;cursor:pointer;user-select:none}
+.work-header:hover{background:var(--surface2)}
+.work-title-area{flex:1;min-width:0}
+.work-name{font-size:15px;font-weight:700;color:var(--text);letter-spacing:-0.02em}
+.work-meta{display:flex;align-items:center;gap:8px;margin-top:4px;flex-wrap:wrap}
+.badge{font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;letter-spacing:0.02em}
+.badge-collab{background:var(--accent-light);color:var(--accent-text)}
+.badge-solo{background:var(--surface2);color:var(--text2)}
+.badge-urgent{background:var(--red-light);color:var(--red)}
+.work-header-right{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.chevron{font-size:12px;color:var(--text3);transition:transform 0.2s;display:inline-block}
+.chevron.open{transform:rotate(180deg)}
+
+/* 플랫폼 영역 */
+.platform-area{padding:12px 20px;background:var(--surface2);border-top:1px solid var(--border);border-bottom:1px solid var(--border)}
+.platform-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.platform-label{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.04em;text-transform:uppercase;white-space:nowrap}
+.platform-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid transparent;cursor:default}
+.chip-serializing{background:#E8F5EE;border-color:#A8D8BB;color:#1A3D26}
+.chip-planned{background:var(--blue-light);border-color:#A8C4E0;color:var(--blue)}
+.chip-none{background:var(--surface);border-color:var(--border);color:var(--text2)}
+.chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.chip-dot.s{background:#2D8A52}
+.chip-dot.p{background:#2D6FAA}
+.chip-dot.n{background:#B0AAA3}
+.chip-ep{font-family:'DM Mono',monospace;font-size:11px;font-weight:500}
+.chip-actions{display:inline-flex;gap:4px}
+.chip-btn{font-size:11px;padding:2px 7px;border-radius:6px;border:1px solid transparent;cursor:pointer;font-family:inherit;font-weight:500;background:none;transition:all 0.1s}
+.chip-btn-check{color:var(--accent);border-color:#A8D8BB}
+.chip-btn-check:hover{background:var(--accent);color:#fff}
+.chip-btn-del{color:var(--text3);border-color:transparent}
+.chip-btn-del:hover{color:var(--red);border-color:#F0C0BC;background:var(--red-light)}
+.add-platform-chip{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:20px;font-size:12px;color:var(--text3);border:1px dashed var(--border2);background:none;cursor:pointer;font-family:inherit;transition:all 0.15s}
+.add-platform-chip:hover{color:var(--text);border-color:var(--border2);background:var(--surface)}
+
+/* 멤버 영역 */
+.member-area{padding:0 20px}
+.member-row{display:flex;align-items:flex-start;gap:12px;padding:14px 0;border-bottom:1px solid var(--border)}
+.member-row:last-child{border-bottom:none}
+.member-identity{display:flex;align-items:center;gap:10px;width:160px;flex-shrink:0}
+.avatar{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.av0{background:#EAF2EC;color:#1A3D26}
+.av1{background:#EAF0F8;color:#1A4A7A}
+.av2{background:#FDF3E7;color:#7A3D0A}
+.av3{background:#FAEAEA;color:#7A1A1A}
+.av4{background:#F5EEF8;color:#4A1A7A}
+.av5{background:#EAF8F5;color:#0A4A3D}
+.av6{background:#F8F5EA;color:#4A3D0A}
+.member-id-info{}
+.member-name{font-size:13px;font-weight:700;color:var(--text)}
+.member-role-badge{font-size:10px;color:var(--text3);font-weight:500}
+.member-tasks-list{flex:1;display:flex;flex-direction:column;gap:5px;min-width:0}
+.task-row{display:flex;align-items:center;gap:8px;padding:6px 10px;border-radius:var(--radius);border:1px solid var(--border);background:var(--bg);transition:all 0.1s}
+.task-row.overdue{border-color:#F0C0BC;background:var(--red-light)}
+.task-row.imminent{border-color:#F0CC80;background:var(--amber-light)}
+.task-row.done-row{opacity:0.4}
+.type-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.td-deadline{background:var(--red)}
+.td-reply{background:var(--amber)}
+.td-contact{background:var(--accent)}
+.td-meeting{background:var(--blue)}
+.task-text{flex:1;font-size:12px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.task-memo{color:var(--text3)}
+.dday{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0;min-width:48px;text-align:right}
+.dday.red{color:var(--red)}
+.dday.amber{color:var(--amber)}
+.dday.gray{color:var(--text3)}
+.dday.green{color:var(--accent)}
+.done-btn{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--border2);background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;color:transparent;font-size:11px;transition:all 0.15s}
+.done-btn:hover{border-color:var(--accent);color:var(--accent)}
+.done-btn.checked{background:var(--accent);border-color:var(--accent);color:#fff}
+.task-del{font-size:11px;color:var(--text3);border:none;background:none;cursor:pointer;padding:0 2px;flex-shrink:0;opacity:0;transition:opacity 0.1s}
+.task-row:hover .task-del{opacity:1}
+.task-del:hover{color:var(--red)}
+.member-no-task{font-size:12px;color:var(--text3);padding:6px 0}
+.add-task-bottom{padding:10px 20px;border-top:1px solid var(--border)}
+.add-task-link{font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:color 0.1s}
+.add-task-link:hover{color:var(--accent)}
+
+/* 빈 상태 */
+.empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px}
+.empty-title{font-size:16px;font-weight:700;color:var(--text2);margin-bottom:6px}
+.empty-desc{font-size:13px}
+
+/* 모달 */
+.modal-overlay{position:fixed;inset:0;background:rgba(26,23,20,0.45);display:flex;align-items:center;justify-content:center;z-index:100;opacity:0;pointer-events:none;transition:opacity 0.2s;padding:20px}
+.modal-overlay.open{opacity:1;pointer-events:all}
+.modal{background:var(--surface);border-radius:var(--radius-lg);border:1px solid var(--border);padding:28px;width:min(480px,100%);max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.15);transform:translateY(8px);transition:transform 0.2s}
+.modal-overlay.open .modal{transform:translateY(0)}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px}
+.modal-title{font-size:17px;font-weight:700;color:var(--text);letter-spacing:-0.02em}
+.modal-close{font-size:20px;color:var(--text3);background:none;border:none;cursor:pointer;line-height:1;padding:0}
+.modal-close:hover{color:var(--text)}
+.form-group{margin-bottom:16px}
+.form-label{display:block;font-size:12px;font-weight:700;color:var(--text2);margin-bottom:6px;letter-spacing:0.02em}
+.form-input,.form-select,.form-textarea{width:100%;border:1px solid var(--border);border-radius:var(--radius);padding:9px 12px;font-size:14px;font-family:inherit;background:var(--surface);color:var(--text);transition:border-color 0.15s;outline:none}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(45,90,61,0.1)}
+.form-textarea{height:72px;resize:vertical}
+.form-hint{font-size:11px;color:var(--text3);margin-top:5px}
+.form-section-divider{font-size:11px;font-weight:700;color:var(--text3);letter-spacing:0.06em;text-transform:uppercase;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.status-options{display:flex;gap:8px}
+.status-opt{flex:1;padding:10px 8px;border-radius:var(--radius);border:1.5px solid var(--border);text-align:center;font-size:12px;font-weight:700;cursor:pointer;transition:all 0.15s;background:var(--surface2);color:var(--text2)}
+.status-opt:hover{border-color:var(--border2)}
+.status-opt.active-s{border-color:#2D8A52;background:#E8F5EE;color:#1A3D26}
+.status-opt.active-p{border-color:#2D6FAA;background:var(--blue-light);color:var(--blue)}
+.status-opt.active-n{border-color:var(--border2);background:var(--surface);color:var(--text)}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:24px;padding-top:20px;border-top:1px solid var(--border)}
+.checkbox-row{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+.checkbox-row input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer}
+.checkbox-row label{font-size:13px;color:var(--text);cursor:pointer}
+
+/* 연재 현황 */
+.platform-overview-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:14px}
+.platform-overview-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow)}
+.poc-work{font-size:15px;font-weight:700;color:var(--text);margin-bottom:12px;letter-spacing:-0.02em}
+.poc-platform-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+.poc-platform-row:last-child{border-bottom:none}
+.poc-platform-name{font-size:13px;font-weight:500;color:var(--text);flex:1}
+.poc-ep{font-size:13px;font-family:'DM Mono',monospace;font-weight:500}
+.poc-status-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
+.psb-s{background:#E8F5EE;color:#1A3D26}
+.psb-p{background:var(--blue-light);color:var(--blue)}
+.psb-n{background:var(--surface2);color:var(--text3)}
+
+/* 토스트 */
+.toast{position:fixed;bottom:28px;right:28px;background:var(--text);color:var(--surface);font-size:13px;font-weight:500;padding:12px 20px;border-radius:var(--radius);box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:999;opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+
+/* 반응형 */
+@media(max-width:768px){
+  .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap}
+  .main{margin-left:0;padding:20px 16px;max-width:100vw}
+  .summary-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar-nav{display:flex;flex-wrap:wrap;padding:8px}
+  .sidebar-footer{display:none}
+  .layout{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- 로딩 오버레이 -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">데이터 불러오는 중...</div>
+</div>
+
+<div class="layout">
+  <!-- 사이드바 -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <h1>웹툰 PD 매니저</h1>
+      <p>WEBTOON SCHEDULE</p>
+    </div>
+    <nav class="sidebar-nav">
+      <div class="nav-label">메뉴</div>
+      <button class="nav-item active" onclick="showPage('dashboard',this)">
+        <span class="nav-icon">◈</span> 대시보드
+      </button>
+      <button class="nav-item" onclick="showPage('platform',this)">
+        <span class="nav-icon">◉</span> 연재 현황
+      </button>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="today-label">TODAY</div>
+      <div class="today-date" id="todayDisplay"></div>
+      <div class="sync-bar">
+        <div class="sync-dot" id="syncDot"></div>
+        <span id="syncStatus">연결 중...</span>
+      </div>
+    </div>
+  </aside>
+
+  <!-- 메인 -->
+  <main class="main">
+    <!-- 대시보드 -->
+    <div id="page-dashboard">
+      <div class="page-header">
+        <div>
+          <div class="page-title">스케줄 대시보드</div>
+          <div class="page-subtitle">작품별 작가 일정 및 연락 현황</div>
+        </div>
+        <div class="header-actions">
+          <button class="btn" onclick="openWorkModal()">+ 작품 추가</button>
+          <button class="btn btn-primary" onclick="openTaskModal(null)">+ 일정 추가</button>
+        </div>
+      </div>
+      <div class="summary-grid" id="summaryGrid"></div>
+      <div class="filter-section">
+        <div class="filter-group">
+          <button class="filter-btn active" onclick="setTab('all',this)">전체</button>
+          <button class="filter-btn" onclick="setTab('pending',this)">미처리</button>
+          <button class="filter-btn" onclick="setTab('done',this)">완료</button>
+        </div>
+        <div class="filter-divider"></div>
+        <button class="type-filter active" onclick="setTypeFilter('all',this)">전체</button>
+        <button class="type-filter" onclick="setTypeFilter('deadline',this)">원고 마감</button>
+        <button class="type-filter" onclick="setTypeFilter('reply',this)">답장 대기</button>
+        <button class="type-filter" onclick="setTypeFilter('contact',this)">연락 예정</button>
+        <button class="type-filter" onclick="setTypeFilter('meeting',this)">미팅/통화</button>
+      </div>
+      <div id="workList"></div>
+    </div>
+
+    <!-- 연재 현황 -->
+    <div id="page-platform" style="display:none">
+      <div class="page-header">
+        <div>
+          <div class="page-title">연재 현황</div>
+          <div class="page-subtitle">플랫폼별 업로드 화수 현황</div>
+        </div>
+      </div>
+      <div class="platform-overview-grid" id="platformOverview"></div>
+    </div>
+  </main>
+</div>
+
+<!-- 모달: 작품 추가 -->
+<div class="modal-overlay" id="workModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="workModalTitle">작품 추가</div>
+      <button class="modal-close" onclick="closeModal('workModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">작품 제목</label>
+      <input class="form-input" id="wm-title" placeholder="예: 달빛소나타"/>
+    </div>
+    <div class="checkbox-row">
+      <input type="checkbox" id="wm-paired" checked onchange="togglePairedFields()"/>
+      <label for="wm-paired">글·그림 합작 (두 명이 함께 작업)</label>
+    </div>
+    <div class="form-section-divider">글작가</div>
+    <div class="form-group">
+      <label class="form-label">이름</label>
+      <input class="form-input" id="wm-writer" placeholder="예: 박지수 작가"/>
+    </div>
+    <div id="wm-artist-section">
+      <div class="form-section-divider">그림작가</div>
+      <div class="form-group">
+        <label class="form-label">이름</label>
+        <input class="form-input" id="wm-artist" placeholder="예: 한소희 작가"/>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('workModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveWork()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 일정 추가 -->
+<div class="modal-overlay" id="taskModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">일정 추가</div>
+      <button class="modal-close" onclick="closeModal('taskModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">작품</label>
+      <select class="form-select" id="tm-work" onchange="updateTmAuthors()"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">작가</label>
+      <select class="form-select" id="tm-author"></select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">유형</label>
+      <select class="form-select" id="tm-type">
+        <option value="deadline">원고 마감</option>
+        <option value="reply">답장 대기</option>
+        <option value="contact">연락 예정</option>
+        <option value="meeting">미팅/통화</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">날짜</label>
+      <input class="form-input" id="tm-date" type="date"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">메모 (선택)</label>
+      <textarea class="form-textarea" id="tm-memo" placeholder="예: 14화 원고, 선화만"></textarea>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('taskModal')">취소</button>
+      <button class="btn btn-primary" onclick="saveTask()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 모달: 플랫폼 추가 -->
+<div class="modal-overlay" id="platformModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">플랫폼 추가</div>
+      <button class="modal-close" onclick="closeModal('platformModal')">✕</button>
+    </div>
+    <div class="form-group">
+      <label class="form-label">플랫폼</label>
+      <select class="form-select" id="pm-name" onchange="toggleCustomPlatform()">
+        <option value="">선택</option>
+        <option>네이버웹툰</option>
+        <option>카카오웹툰</option>
+        <option>카카오페이지</option>
+        <option>레진코믹스</option>
+        <option>봄툰</option>
+        <option>탑툰</option>
+        <option>리디</option>
+        <option value="__custom">직접 입력</option>
+      </select>
+    </div>
+    <div class="form-group" id="pm-custom-group" style="display:none">
+      <label class="form-label">플랫폼 이름</label>
+      <input class="form-input" id="pm-custom" placeholder="플랫폼 이름 입력"/>
+    </div>
+    <div class="form-group">
+      <label class="form-label">연재 상태</label>
+      <div class="status-options">
+        <div class="status-opt active-s" id="sopt-serializing" onclick="selectStatus('serializing')">연재 중</div>
+        <div class="status-opt" id="sopt-planned" onclick="selectStatus('planned')">연재 예정</div>
+        <div class="status-opt" id="sopt-none" onclick="selectStatus('none')">미연재</div>
+      </div>
+    </div>
+    <div class="form-group" id="pm-ep-group">
+      <label class="form-label">현재 업로드 화수</label>
+      <input class="form-input" id="pm-ep" type="number" min="1" placeholder="예: 42"/>
+      <div class="form-hint">모르면 비워두세요</div>
+    </div>
+    <div class="form-group">
+      <label class="form-label">플랫폼 링크 (선택)</label>
+      <input class="form-input" id="pm-link" placeholder="https://..."/>
+    </div>
+    <div class="modal-footer">
+      <button class="btn" onclick="closeModal('platformModal')">취소</button>
+      <button class="btn btn-primary" onclick="savePlatform()">추가</button>
+    </div>
+  </div>
+</div>
+
+<!-- 토스트 -->
+<div class="toast" id="toast"></div>
+
+<!-- Firebase SDK -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, onSnapshot, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ── Firebase 설정 ────────────────────────────────────────
+const firebaseConfig = {
+  apiKey: "AIzaSyCqUwH_Kc0kwYU3Fl95LyFx1eyXbjkIGLY",
+  authDomain: "webtoon-pd-3edda.firebaseapp.com",
+  projectId: "webtoon-pd-3edda",
+  storageBucket: "webtoon-pd-3edda.firebasestorage.app",
+  messagingSenderId: "173903637531",
+  appId: "1:173903637531:web:5687f6fbaa800537e7dcbe",
+  measurementId: "G-9B5SH9SS5J"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+const DATA_DOC = doc(db, "webtoon-pd", "main");
+
+// ── 동기화 상태 UI ────────────────────────────────────────
+function setSyncStatus(state, msg) {
+  const dot = document.getElementById('syncDot');
+  const txt = document.getElementById('syncStatus');
+  dot.className = 'sync-dot ' + state;
+  txt.textContent = msg;
+}
+
+// ── 데이터 저장 ──────────────────────────────────────────
+async function saveToFirebase() {
+  setSyncStatus('syncing', '저장 중...');
+  try {
+    await setDoc(DATA_DOC, { works, tasks, nextId, updatedAt: Date.now() });
+    setSyncStatus('connected', '동기화됨');
+  } catch(e) {
+    setSyncStatus('error', '저장 실패');
+    console.error('Firebase 저장 오류:', e);
+  }
+}
+
+// ── 데이터 로드 및 실시간 리스닝 ─────────────────────────
+function startListening() {
+  onSnapshot(DATA_DOC, (snapshot) => {
+    const overlay = document.getElementById('loadingOverlay');
+
+    if (snapshot.exists()) {
+      const data = snapshot.data();
+      works = data.works || [];
+      tasks = data.tasks || [];
+      nextId = data.nextId || (Math.max(0, ...tasks.map(t => t.id)) + 1);
+    } else {
+      // 첫 사용: 빈 데이터로 시작
+      works = [];
+      tasks = [];
+      nextId = 1;
+      saveToFirebase();
+    }
+
+    works.forEach(w => { if (expanded[w.id] === undefined) expanded[w.id] = true; });
+    render();
+    overlay.classList.add('hidden');
+    setSyncStatus('connected', '동기화됨');
+  }, (error) => {
+    console.error('Firebase 리스닝 오류:', error);
+    setSyncStatus('error', '연결 오류');
+    document.getElementById('loadingOverlay').classList.add('hidden');
+  });
+}
+
+// ── 전역 saveData 재정의 ──────────────────────────────────
+window._saveData = saveToFirebase;
+
+// Firebase 연결 시작
+setSyncStatus('syncing', '연결 중...');
+startListening();
+</script>
+
+<script>
+// ── 데이터 ──────────────────────────────────────────────
+let works = [], tasks = [], nextId = 1;
+
+function saveData() {
+  if (window._saveData) window._saveData();
+}
+
+// ── 유틸 ────────────────────────────────────────────────
+function today() { const d = new Date(); d.setHours(0,0,0,0); return d; }
+function dayDiff(s) { const d = new Date(s); d.setHours(0,0,0,0); return Math.round((d - today()) / 86400000); }
+function ddayLabel(n) { return n === 0 ? 'D-day' : n > 0 ? `D-${n}` : `D+${Math.abs(n)}`; }
+function ddayCls(n, done) { if (done) return 'gray'; if (n < 0) return 'red'; if (n <= 2) return 'red'; if (n <= 5) return 'amber'; return 'green'; }
+
+const avCls = ['av0','av1','av2','av3','av4','av5','av6'];
+const avMap = {}; let avIdx = 0;
+function getAv(n) { if (!avMap[n]) { avMap[n] = avCls[avIdx % avCls.length]; avIdx++; } return avMap[n]; }
+function initials(n) { return n.replace(/\s*작가$/, '').slice(0, 2); }
+
+const typeLabel = { deadline:'원고 마감', reply:'답장 대기', contact:'연락 예정', meeting:'미팅/통화' };
+const typeDot = { deadline:'td-deadline', reply:'td-reply', contact:'td-contact', meeting:'td-meeting' };
+
+function workUrgency(wId) {
+  const ts = tasks.filter(t => t.workId === wId && !t.done);
+  if (!ts.length) return 999;
+  return Math.min(...ts.map(t => dayDiff(t.date)));
+}
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  setTimeout(() => el.classList.remove('show'), 2200);
+}
+
+// ── 상태 ────────────────────────────────────────────────
+let expanded = {};
+let currentTab = 'all';
+let currentTypeFilter = 'all';
+
+// ── 페이지 전환 ─────────────────────────────────────────
+function showPage(name, el) {
+  document.querySelectorAll('[id^=page-]').forEach(p => p.style.display = 'none');
+  document.getElementById('page-' + name).style.display = '';
+  document.querySelectorAll('.nav-item').forEach(i => i.classList.remove('active'));
+  if (el) el.classList.add('active');
+  if (name === 'platform') renderPlatformOverview();
+}
+
+// ── 렌더 ────────────────────────────────────────────────
+function render() {
+  renderSummary();
+  renderWorks();
+  const d = today();
+  const days = ['일','월','화','수','목','금','토'];
+  document.getElementById('todayDisplay').textContent =
+    `${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${days[d.getDay()]})`;
+}
+
+function renderSummary() {
+  const all = tasks.filter(t => !t.done);
+  const ov = all.filter(t => dayDiff(t.date) < 0).length;
+  const tod = all.filter(t => dayDiff(t.date) === 0).length;
+  const soon = all.filter(t => dayDiff(t.date) > 0 && dayDiff(t.date) <= 3).length;
+  document.getElementById('summaryGrid').innerHTML = `
+    <div class="metric-card">
+      <div class="metric-label">전체 미처리</div>
+      <div class="metric-value">${all.length}</div>
+      <div class="metric-sub">활성 일정</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">기한 초과</div>
+      <div class="metric-value red">${ov}</div>
+      <div class="metric-sub">즉시 확인 필요</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">오늘 마감</div>
+      <div class="metric-value amber">${tod}</div>
+      <div class="metric-sub">오늘 처리</div>
+    </div>
+    <div class="metric-card">
+      <div class="metric-label">3일 내 임박</div>
+      <div class="metric-value green">${soon}</div>
+      <div class="metric-sub">사전 확인</div>
+    </div>`;
+}
+
+function filterTasks(wId, author) {
+  return tasks.filter(t => {
+    if (t.workId !== wId || t.author !== author) return false;
+    if (currentTab === 'pending' && t.done) return false;
+    if (currentTab === 'done' && !t.done) return false;
+    if (currentTypeFilter !== 'all' && t.type !== currentTypeFilter) return false;
+    return true;
+  });
+}
+
+function renderWorks() {
+  const sorted = [...works].sort((a, b) => workUrgency(a.id) - workUrgency(b.id));
+  let html = '';
+
+  for (const w of sorted) {
+    const minD = workUrgency(w.id);
+    const urgentCount = tasks.filter(t => t.workId === w.id && !t.done && dayDiff(t.date) <= 0).length;
+    const urgCls = minD < 0 ? 'urgent' : minD <= 3 ? 'warning' : '';
+    const isOpen = expanded[w.id] !== false;
+
+    let platformHtml = `<div class="platform-area"><div class="platform-row">
+      <span class="platform-label">플랫폼</span>`;
+    for (const p of w.platforms) {
+      const dotCls = p.status === 'serializing' ? 's' : p.status === 'planned' ? 'p' : 'n';
+      const chipCls = p.status === 'serializing' ? 'chip-serializing' : p.status === 'planned' ? 'chip-planned' : 'chip-none';
+      const statusTxt = p.status === 'serializing' ? '연재 중' : p.status === 'planned' ? '연재 예정' : '미연재';
+      platformHtml += `<div class="platform-chip ${chipCls}">
+        <span class="chip-dot ${dotCls}"></span>
+        <span>${p.name}</span>
+        ${p.status === 'serializing' ? `<span class="chip-ep">${p.episode != null ? p.episode + '화' : '?화'}</span>` : `<span style="font-size:10px">${statusTxt}</span>`}
+        <span class="chip-actions">
+          <button class="chip-btn chip-btn-del" onclick="removePlatform('${w.id}','${p.name}',event)">✕</button>
+        </span>
+      </div>`;
+    }
+    platformHtml += `<button class="add-platform-chip" onclick="openPlatformModal('${w.id}',event)">+ 플랫폼</button>
+    </div></div>`;
+
+    let membersHtml = `<div class="member-area">`;
+    for (const wr of w.writers) {
+      const mTasks = filterTasks(w.id, wr.name);
+      let tasksHtml = '';
+      if (!mTasks.length) {
+        tasksHtml = `<div class="member-no-task">일정 없음</div>`;
+      } else {
+        for (const t of mTasks.sort((a, b) => dayDiff(a.date) - dayDiff(b.date))) {
+          const diff = dayDiff(t.date);
+          const rowCls = t.done ? 'done-row' : diff <= 0 ? 'overdue' : diff <= 3 ? 'imminent' : '';
+          tasksHtml += `<div class="task-row ${rowCls}">
+            <span class="type-dot ${typeDot[t.type]}"></span>
+            <span class="task-text">${typeLabel[t.type]}${t.memo ? ` <span class="task-memo">· ${t.memo}</span>` : ''}</span>
+            <span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0">${t.date}</span>
+            <span class="dday ${ddayCls(diff, t.done)}">${ddayLabel(diff)}</span>
+            <button class="done-btn ${t.done ? 'checked' : ''}" onclick="toggleDone(${t.id})">✓</button>
+            <button class="task-del" onclick="deleteTask(${t.id})" title="삭제">✕</button>
+          </div>`;
+        }
+      }
+      membersHtml += `<div class="member-row">
+        <div class="member-identity">
+          <div class="avatar ${getAv(wr.name)}">${initials(wr.name)}</div>
+          <div class="member-id-info">
+            <div class="member-name">${wr.name}</div>
+            <div class="member-role-badge">${wr.role}작가</div>
+          </div>
+        </div>
+        <div class="member-tasks-list">${tasksHtml}</div>
+      </div>`;
+    }
+    membersHtml += `</div>`;
+
+    html += `<div class="work-card ${urgCls}">
+      <div class="work-header" onclick="toggleWork('${w.id}')">
+        <div class="work-title-area">
+          <div class="work-name">${w.title}</div>
+          <div class="work-meta">
+            <span class="badge ${w.paired ? 'badge-collab' : 'badge-solo'}">${w.paired ? '글·그림 합작' : '단독'}</span>
+            ${urgentCount > 0 ? `<span class="badge badge-urgent">긴급 ${urgentCount}건</span>` : ''}
+          </div>
+        </div>
+        <div class="work-header-right">
+          <button class="btn btn-sm" onclick="deleteWork('${w.id}',event)" style="color:var(--text3);border-color:transparent;font-size:11px">삭제</button>
+          <span class="chevron ${isOpen ? 'open' : ''}">▼</span>
+        </div>
+      </div>
+      ${isOpen ? platformHtml + membersHtml + `<div class="add-task-bottom"><button class="add-task-link" onclick="openTaskModal('${w.id}')">+ 이 작품에 일정 추가</button></div>` : ''}
+    </div>`;
+  }
+
+  if (!html) html = `<div class="empty-state">
+    <div class="empty-icon">◈</div>
+    <div class="empty-title">작품이 없어요</div>
+    <div class="empty-desc">상단의 '작품 추가' 버튼으로 시작해 보세요</div>
+  </div>`;
+  document.getElementById('workList').innerHTML = html;
+}
+
+function renderPlatformOverview() {
+  let html = '';
+  for (const w of works) {
+    if (!w.platforms.length) continue;
+    let rows = '';
+    for (const p of w.platforms) {
+      const sbCls = p.status === 'serializing' ? 'psb-s' : p.status === 'planned' ? 'psb-p' : 'psb-n';
+      const sbTxt = p.status === 'serializing' ? '연재 중' : p.status === 'planned' ? '연재 예정' : '미연재';
+      rows += `<div class="poc-platform-row">
+        <span class="poc-platform-name">${p.name}</span>
+        ${p.status === 'serializing' ? `<span class="poc-ep">${p.episode != null ? p.episode + '화' : '-'}</span>` : ''}
+        <span class="poc-status-badge ${sbCls}">${sbTxt}</span>
+        ${p.link ? `<a href="${p.link}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗</a>` : ''}
+      </div>`;
+    }
+    html += `<div class="platform-overview-card">
+      <div class="poc-work">${w.title}</div>
+      ${rows}
+    </div>`;
+  }
+  if (!html) html = `<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">등록된 플랫폼이 없어요</div></div>`;
+  document.getElementById('platformOverview').innerHTML = html;
+}
+
+// ── 인터랙션 ─────────────────────────────────────────────
+function toggleWork(id) { expanded[id] = expanded[id] === false ? true : false; render(); }
+
+function toggleDone(id) {
+  const t = tasks.find(t => t.id === id);
+  if (t) { t.done = !t.done; saveData(); render(); showToast(t.done ? '완료 처리했어요' : '완료 취소했어요'); }
+}
+
+function deleteTask(id) {
+  if (!confirm('이 일정을 삭제할까요?')) return;
+  tasks = tasks.filter(t => t.id !== id);
+  saveData(); render(); showToast('일정을 삭제했어요');
+}
+
+function deleteWork(id, e) {
+  e.stopPropagation();
+  if (!confirm('이 작품과 모든 일정을 삭제할까요?')) return;
+  works = works.filter(w => w.id !== id);
+  tasks = tasks.filter(t => t.workId !== id);
+  saveData(); render(); showToast('작품을 삭제했어요');
+}
+
+function removePlatform(wId, name, e) {
+  e.stopPropagation();
+  const w = works.find(w => w.id === wId);
+  if (w) { w.platforms = w.platforms.filter(p => p.name !== name); saveData(); render(); showToast('플랫폼을 삭제했어요'); }
+}
+
+function setTab(t, el) {
+  currentTab = t;
+  document.querySelectorAll('.filter-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active'); render();
+}
+
+function setTypeFilter(f, el) {
+  currentTypeFilter = f;
+  document.querySelectorAll('.type-filter').forEach(b => b.classList.remove('active'));
+  el.classList.add('active'); render();
+}
+
+// ── 모달 ────────────────────────────────────────────────
+function openModal(id) { document.getElementById(id).classList.add('open'); }
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(el => {
+  el.addEventListener('click', function(e) { if (e.target === this) this.classList.remove('open'); });
+});
+
+let editingWorkId = null;
+function openWorkModal(workId) {
+  editingWorkId = workId || null;
+  const w = workId ? works.find(w => w.id === workId) : null;
+  document.getElementById('workModalTitle').textContent = w ? '작품 수정' : '작품 추가';
+  document.getElementById('wm-title').value = w ? w.title : '';
+  document.getElementById('wm-paired').checked = w ? w.paired : true;
+  document.getElementById('wm-writer').value = w ? w.writers[0].name : '';
+  document.getElementById('wm-artist').value = w && w.paired ? w.writers[1].name : '';
+  document.getElementById('wm-artist-section').style.display = (w ? w.paired : true) ? '' : 'none';
+  openModal('workModal');
+}
+
+function togglePairedFields() {
+  document.getElementById('wm-artist-section').style.display = document.getElementById('wm-paired').checked ? '' : 'none';
+}
+
+function saveWork() {
+  const title = document.getElementById('wm-title').value.trim();
+  const paired = document.getElementById('wm-paired').checked;
+  const writer = document.getElementById('wm-writer').value.trim();
+  const artist = paired ? document.getElementById('wm-artist').value.trim() : '';
+  if (!title || !writer || (paired && !artist)) { alert('필수 항목을 입력해 주세요.'); return; }
+  if (editingWorkId) {
+    const w = works.find(w => w.id === editingWorkId);
+    w.title = title; w.paired = paired;
+    w.writers = paired ? [{name:writer,role:'글'},{name:artist,role:'그림'}] : [{name:writer,role:'글·그림'}];
+  } else {
+    const id = 'w' + Date.now();
+    works.push({ id, title, paired, writers: paired ? [{name:writer,role:'글'},{name:artist,role:'그림'}] : [{name:writer,role:'글·그림'}], platforms: [] });
+    expanded[id] = true;
+  }
+  saveData(); closeModal('workModal'); render(); showToast(editingWorkId ? '작품을 수정했어요' : '작품을 추가했어요');
+}
+
+let preselectedWorkId = null;
+function openTaskModal(wId) {
+  preselectedWorkId = wId;
+  const opts = works.map(w => `<option value="${w.id}" ${wId === w.id ? 'selected' : ''}>${w.title}</option>`).join('');
+  document.getElementById('tm-work').innerHTML = opts;
+  updateTmAuthors();
+  document.getElementById('tm-date').value = today().toISOString().slice(0, 10);
+  document.getElementById('tm-memo').value = '';
+  openModal('taskModal');
+}
+
+function updateTmAuthors() {
+  const wId = document.getElementById('tm-work').value;
+  const w = works.find(w => w.id === wId);
+  if (!w) return;
+  document.getElementById('tm-author').innerHTML = w.writers.map(wr => `<option value="${wr.name}">${wr.name} (${wr.role})</option>`).join('');
+}
+
+function saveTask() {
+  const workId = document.getElementById('tm-work').value;
+  const author = document.getElementById('tm-author').value;
+  const type = document.getElementById('tm-type').value;
+  const date = document.getElementById('tm-date').value;
+  const memo = document.getElementById('tm-memo').value.trim();
+  if (!workId || !author || !date) { alert('필수 항목을 입력해 주세요.'); return; }
+  tasks.push({ id: nextId++, workId, author, type, date, memo, done: false });
+  saveData(); closeModal('taskModal'); render(); showToast('일정을 추가했어요');
+}
+
+let platformTargetWorkId = null;
+let selectedStatus = 'serializing';
+
+function openPlatformModal(wId, e) {
+  if (e) e.stopPropagation();
+  platformTargetWorkId = wId;
+  selectedStatus = 'serializing';
+  document.getElementById('pm-name').value = '';
+  document.getElementById('pm-custom').value = '';
+  document.getElementById('pm-ep').value = '';
+  document.getElementById('pm-link').value = '';
+  document.getElementById('pm-custom-group').style.display = 'none';
+  document.getElementById('pm-ep-group').style.display = '';
+  ['serializing','planned','none'].forEach(s => {
+    document.getElementById('sopt-'+s).className = 'status-opt' + (s === 'serializing' ? ' active-s' : '');
+  });
+  openModal('platformModal');
+}
+
+function toggleCustomPlatform() {
+  document.getElementById('pm-custom-group').style.display = document.getElementById('pm-name').value === '__custom' ? '' : 'none';
+}
+
+function selectStatus(s) {
+  selectedStatus = s;
+  document.getElementById('sopt-serializing').className = 'status-opt' + (s === 'serializing' ? ' active-s' : '');
+  document.getElementById('sopt-planned').className = 'status-opt' + (s === 'planned' ? ' active-p' : '');
+  document.getElementById('sopt-none').className = 'status-opt' + (s === 'none' ? ' active-n' : '');
+  document.getElementById('pm-ep-group').style.display = s === 'serializing' ? '' : 'none';
+}
+
+function savePlatform() {
+  let name = document.getElementById('pm-name').value;
+  if (name === '__custom') name = document.getElementById('pm-custom').value.trim();
+  if (!name) { alert('플랫폼을 선택해 주세요.'); return; }
+  const ep = selectedStatus === 'serializing' ? (parseInt(document.getElementById('pm-ep').value) || null) : null;
+  const link = document.getElementById('pm-link').value.trim();
+  const w = works.find(w => w.id === platformTargetWorkId);
+  if (w.platforms.find(p => p.name === name)) { alert('이미 등록된 플랫폼이에요.'); return; }
+  w.platforms.push({ name, status: selectedStatus, episode: ep, link });
+  saveData(); closeModal('platformModal'); render(); showToast('플랫폼을 추가했어요');
+}
+</script>
+</body>
+</html>

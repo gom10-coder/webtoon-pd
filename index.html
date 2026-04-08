@@ -152,41 +152,49 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
 /* ── 달력 ── */
 .cal-controls{display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-wrap:wrap}
-.cal-nav-group{display:flex;align-items:center;gap:8px}
 .cal-nav{background:none;border:1px solid var(--border);border-radius:var(--radius);padding:6px 12px;cursor:pointer;font-size:13px;color:var(--text2);font-family:inherit;transition:all 0.15s}
 .cal-nav:hover{background:var(--surface2)}
-.cal-month-title{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-0.02em;min-width:120px;text-align:center}
+.cal-month-title{font-size:18px;font-weight:700;color:var(--text);letter-spacing:-0.02em;min-width:130px;text-align:center}
 
 /* 작품 필터 탭 */
-.cal-work-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:20px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)}
+.cal-work-filter{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px;padding:12px 16px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg)}
 .cal-work-tab{font-size:12px;padding:5px 14px;border-radius:20px;border:1.5px solid var(--border);background:var(--surface2);color:var(--text2);cursor:pointer;font-family:inherit;font-weight:500;transition:all 0.15s;white-space:nowrap}
 .cal-work-tab:hover{border-color:var(--border2);color:var(--text)}
 .cal-work-tab.active{border-color:var(--accent);background:var(--accent-light);color:var(--accent-text);font-weight:700}
 
-/* 월별 요약 */
-.cal-month-summary{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin-bottom:20px}
-.cal-summary-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px 16px}
-.cal-summary-label{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:4px}
-.cal-summary-value{font-size:22px;font-weight:700;font-family:'DM Mono',monospace;color:var(--text)}
-.cal-summary-sub{font-size:11px;color:var(--text3);margin-top:2px}
+/* 월별 요약 - 원고 마감만 */
+.cal-month-summary{margin-bottom:20px}
+.cal-deadline-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 20px;display:flex;align-items:center;gap:16px;box-shadow:var(--shadow)}
+.cal-deadline-icon{font-size:28px}
+.cal-deadline-info{}
+.cal-deadline-label{font-size:11px;color:var(--text3);font-weight:700;letter-spacing:0.04em;text-transform:uppercase;margin-bottom:2px}
+.cal-deadline-value{font-size:24px;font-weight:700;font-family:'DM Mono',monospace;color:var(--red)}
+.cal-deadline-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.cal-deadline-list{flex:1;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.cal-deadline-chip{font-size:12px;padding:4px 10px;background:var(--red-light);color:var(--red);border-radius:20px;font-weight:500;white-space:nowrap}
+.cal-deadline-chip.conti{background:#F5EEE8;color:#8B4513}
+.cal-deadline-chip.done{background:var(--accent-light);color:var(--accent-text);text-decoration:line-through;opacity:0.6}
 
+/* 달력 그리드 */
 .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
 .cal-day-header{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0;letter-spacing:0.04em}
 .cal-day-header:first-child{color:var(--red)}.cal-day-header:last-child{color:var(--blue)}
-.cal-cell{min-height:88px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:6px;position:relative;transition:box-shadow 0.1s}
+.cal-cell{min-height:90px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:6px;transition:box-shadow 0.1s}
 .cal-cell:hover{box-shadow:0 2px 8px rgba(0,0,0,0.06)}
 .cal-cell.other-month{background:var(--surface2);opacity:0.45}
 .cal-cell.today{border-color:var(--accent);border-width:2px}
 .cal-date{font-size:12px;font-weight:700;color:var(--text);margin-bottom:3px}
 .cal-cell.today .cal-date{color:var(--accent)}
-.cal-event{font-size:10px;padding:2px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:default;line-height:1.5}
+
+/* 달력 셀 이벤트 - 작품명 + 일정 표시 */
+.cal-event{font-size:10px;padding:2px 6px;border-radius:4px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5}
 .cal-ev-deadline{background:#FAEAEA;color:var(--red);border-left:2px solid var(--red)}
 .cal-ev-conti{background:#F5EEE8;color:#8B4513;border-left:2px solid #8B4513}
 .cal-ev-done{background:#EAF2EC;color:var(--accent);border-left:2px solid var(--accent)}
 .cal-ev-other{background:var(--surface2);color:var(--text2);border-left:2px solid var(--border2)}
 .cal-more{font-size:10px;color:var(--text3);padding:1px 4px}
 
-/* 월별 일정 리스트 */
+/* 이달 일정 리스트 */
 .cal-list-section{margin-top:28px}
 .cal-list-title{font-size:14px;font-weight:700;color:var(--text);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--border)}
 .cal-list-row{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--radius);border:1px solid var(--border);background:var(--surface);margin-bottom:6px}
@@ -194,7 +202,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .cal-list-date{font-size:12px;font-family:'DM Mono',monospace;color:var(--text3);flex-shrink:0;min-width:72px}
 .cal-list-work{font-size:12px;font-weight:700;color:var(--accent-text);background:var(--accent-light);padding:2px 8px;border-radius:10px;white-space:nowrap;flex-shrink:0}
 .cal-list-author{font-size:12px;color:var(--text2);flex-shrink:0}
-.cal-list-type{font-size:12px;color:var(--text);flex:1}
+.cal-list-type{font-size:12px;color:var(--text);flex:1;display:flex;align-items:center;gap:5px}
 .cal-list-memo{font-size:11px;color:var(--text3)}
 .cal-list-dday{font-size:11px;font-weight:700;font-family:'DM Mono',monospace;flex-shrink:0}
 .cal-list-dday.red{color:var(--red)}.cal-list-dday.amber{color:var(--amber)}.cal-list-dday.green{color:var(--accent)}.cal-list-dday.gray{color:var(--text3)}
@@ -258,6 +266,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
   .form-row{grid-template-columns:1fr}
   .calendar-grid{gap:2px}
   .cal-cell{min-height:60px}
+  .cal-deadline-card{flex-wrap:wrap}
 }
 </style>
 </head>
@@ -353,20 +362,17 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div id="page-calendar" style="display:none">
       <div class="page-header"><div><div class="page-title">마감 달력</div><div class="page-subtitle">월별·작품별 마감 현황</div></div></div>
 
-      <!-- 네비 -->
       <div class="cal-controls">
-        <div class="cal-nav-group">
-          <button class="cal-nav" onclick="calMove(-1)">◀</button>
-          <div class="cal-month-title" id="calMonthTitle"></div>
-          <button class="cal-nav" onclick="calMove(1)">▶</button>
-          <button class="cal-nav" onclick="calGoToday()">오늘</button>
-        </div>
+        <button class="cal-nav" onclick="calMove(-1)">◀</button>
+        <div class="cal-month-title" id="calMonthTitle"></div>
+        <button class="cal-nav" onclick="calMove(1)">▶</button>
+        <button class="cal-nav" onclick="calGoToday()">오늘</button>
       </div>
 
       <!-- 작품 필터 탭 -->
       <div class="cal-work-filter" id="calWorkFilter"></div>
 
-      <!-- 월별 요약 -->
+      <!-- 원고 마감 요약 카드 -->
       <div class="cal-month-summary" id="calMonthSummary"></div>
 
       <!-- 달력 그리드 -->
@@ -400,10 +406,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="form-group">
           <label class="form-label">알림 시간</label>
           <select class="form-select" id="slackNotifyTime">
-            <option value="09:00">오전 9:00</option>
-            <option value="10:00">오전 10:00</option>
-            <option value="18:00">오후 6:00</option>
-            <option value="20:00">오후 8:00</option>
+            <option value="09:00">오전 9:00</option><option value="10:00">오전 10:00</option>
+            <option value="18:00">오후 6:00</option><option value="20:00">오후 8:00</option>
           </select>
         </div>
         <button class="btn btn-primary" onclick="saveSlackSettings()">저장</button>
@@ -503,28 +507,18 @@ const auth = getAuth(app);
 const provider = new GoogleAuthProvider();
 let unsubscribe = null;
 
-function setSyncStatus(state, msg){
-  document.getElementById('syncDot').className='sync-dot '+state;
-  document.getElementById('syncStatus').textContent=msg;
-}
+function setSyncStatus(state,msg){document.getElementById('syncDot').className='sync-dot '+state;document.getElementById('syncStatus').textContent=msg;}
 async function saveToFirebase(){
-  const user=auth.currentUser; if(!user)return;
+  const user=auth.currentUser;if(!user)return;
   setSyncStatus('syncing','저장 중...');
-  try{
-    await setDoc(doc(db,"users",user.uid,"data","main"),{works,tasks,nextId,slackWebhook,slackTime,updatedAt:Date.now()});
-    setSyncStatus('connected','동기화됨');
-  }catch(e){setSyncStatus('error','저장 실패');}
+  try{await setDoc(doc(db,"users",user.uid,"data","main"),{works,tasks,nextId,slackWebhook,slackTime,updatedAt:Date.now()});setSyncStatus('connected','동기화됨');}
+  catch(e){setSyncStatus('error','저장 실패');}
 }
 function startListening(uid){
   if(unsubscribe)unsubscribe();
   unsubscribe=onSnapshot(doc(db,"users",uid,"data","main"),(snap)=>{
-    if(snap.exists()){
-      const d=snap.data();
-      works=d.works||[]; tasks=d.tasks||[];
-      nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);
-      slackWebhook=d.slackWebhook||''; slackTime=d.slackTime||'09:00';
-      updateSlackUI();
-    }else{works=[];tasks=[];nextId=1;saveToFirebase();}
+    if(snap.exists()){const d=snap.data();works=d.works||[];tasks=d.tasks||[];nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);slackWebhook=d.slackWebhook||'';slackTime=d.slackTime||'09:00';updateSlackUI();}
+    else{works=[];tasks=[];nextId=1;saveToFirebase();}
     works.forEach(w=>{if(expanded[w.id]===undefined)expanded[w.id]=true;});
     render();
     document.getElementById('loadingOverlay').classList.add('hidden');
@@ -556,11 +550,17 @@ window._saveData=saveToFirebase;
 let works=[],tasks=[],nextId=1,slackWebhook='',slackTime='09:00';
 function saveData(){if(window._saveData)window._saveData();}
 
-function today(){const d=new Date();d.setHours(0,0,0,0);return d;}
+// ── 날짜 유틸 (KST 기준) ──────────────────────────────
+function todayStr(){
+  // UTC+9 기준 오늘 날짜 문자열 반환 (toISOString 오류 방지)
+  const now=new Date();
+  const kst=new Date(now.getTime()+9*60*60*1000);
+  return kst.toISOString().slice(0,10);
+}
+function today(){const d=new Date(todayStr());d.setHours(0,0,0,0);return d;}
 function dayDiff(s){const d=new Date(s);d.setHours(0,0,0,0);return Math.round((d-today())/86400000);}
 function ddayLabel(n){return n===0?'D-day':n>0?`D-${n}`:`D+${Math.abs(n)}`;}
 function ddayCls(n,done){if(done)return 'gray';if(n<0||n<=2)return 'red';if(n<=5)return 'amber';return 'green';}
-function todayStr(){return today().toISOString().slice(0,10);}
 
 const avCls=['av0','av1','av2','av3','av4','av5','av6'],avMap={};let avIdx=0;
 function getAv(n){if(!avMap[n]){avMap[n]=avCls[avIdx++%avCls.length];}return avMap[n];}
@@ -593,7 +593,11 @@ function showPage(name,el){
   if(name==='slack')updateSlackUI();
 }
 
-function render(){renderSummary();renderWorks();const d=today(),days=['일','월','화','수','목','금','토'];document.getElementById('todayDisplay').textContent=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${days[d.getDay()]})`;}
+function render(){
+  renderSummary();renderWorks();
+  const ts=todayStr(),d=new Date(ts),days=['일','월','화','수','목','금','토'];
+  document.getElementById('todayDisplay').textContent=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${days[d.getDay()]})`;
+}
 
 function renderSummary(){
   const all=tasks.filter(t=>!t.done);
@@ -667,11 +671,7 @@ function calGoToday(){calYear=new Date().getFullYear();calMonth=new Date().getMo
 function setCalWork(wId){calWorkId=wId;renderCalendar();}
 
 function getCalTasks(){
-  // 선택된 작품 필터
-  return tasks.filter(t=>{
-    if(calWorkId!=='all'&&t.workId!==calWorkId)return false;
-    return true;
-  });
+  return tasks.filter(t=>calWorkId==='all'||t.workId===calWorkId);
 }
 
 function renderCalendar(){
@@ -680,27 +680,40 @@ function renderCalendar(){
 
   // 작품 필터 탭
   let tabHtml=`<button class="cal-work-tab ${calWorkId==='all'?'active':''}" onclick="setCalWork('all')">전체 작품</button>`;
-  works.forEach(w=>{
-    tabHtml+=`<button class="cal-work-tab ${calWorkId===w.id?'active':''}" onclick="setCalWork('${w.id}')">${w.title}</button>`;
-  });
+  works.forEach(w=>{tabHtml+=`<button class="cal-work-tab ${calWorkId===w.id?'active':''}" onclick="setCalWork('${w.id}')">${w.title}</button>`;});
   document.getElementById('calWorkFilter').innerHTML=tabHtml;
 
   // 이달 일정
   const monthStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const allCal=getCalTasks();
   const monthTasks=allCal.filter(t=>t.date.startsWith(monthStr));
-  const doneTasks=monthTasks.filter(t=>t.done);
-  const pendingTasks=monthTasks.filter(t=>!t.done);
+
+  // ── 원고/콘티 마감만 요약 카드 ──
   const deadlineTasks=monthTasks.filter(t=>['deadline','conti'].includes(t.type));
+  const doneDeadlines=deadlineTasks.filter(t=>t.done);
+  const pendingDeadlines=deadlineTasks.filter(t=>!t.done);
 
-  // 월별 요약
+  let chipHtml='';
+  deadlineTasks.sort((a,b)=>a.date>b.date?1:-1).forEach(t=>{
+    const w=works.find(w=>w.id===t.workId);
+    const day=parseInt(t.date.slice(8,10));
+    const cls=t.done?'done':t.type==='conti'?'conti':'';
+    chipHtml+=`<span class="cal-deadline-chip ${cls}">${day}일 · ${w?w.title:''} ${typeLabel[t.type]}</span>`;
+  });
+
+  const selectedWork=calWorkId!=='all'?works.find(w=>w.id===calWorkId):null;
   document.getElementById('calMonthSummary').innerHTML=`
-    <div class="cal-summary-card"><div class="cal-summary-label">이달 전체</div><div class="cal-summary-value">${monthTasks.length}</div><div class="cal-summary-sub">등록된 일정</div></div>
-    <div class="cal-summary-card"><div class="cal-summary-label">원고/콘티 마감</div><div class="cal-summary-value" style="color:var(--red)">${deadlineTasks.length}</div><div class="cal-summary-sub">마감 일정</div></div>
-    <div class="cal-summary-card"><div class="cal-summary-label">완료</div><div class="cal-summary-value" style="color:var(--accent)">${doneTasks.length}</div><div class="cal-summary-sub">처리 완료</div></div>
-    <div class="cal-summary-card"><div class="cal-summary-label">미처리</div><div class="cal-summary-value" style="color:var(--amber)">${pendingTasks.length}</div><div class="cal-summary-sub">남은 일정</div></div>`;
+    <div class="cal-deadline-card">
+      <div class="cal-deadline-icon">📋</div>
+      <div class="cal-deadline-info">
+        <div class="cal-deadline-label">${selectedWork?selectedWork.title+' · ':''}이달 원고/콘티 마감</div>
+        <div class="cal-deadline-value">${deadlineTasks.length}건</div>
+        <div class="cal-deadline-sub">완료 ${doneDeadlines.length}건 · 미처리 ${pendingDeadlines.length}건</div>
+      </div>
+      <div class="cal-deadline-list">${chipHtml||'<span style="font-size:12px;color:var(--text3)">이달 마감 일정 없음</span>'}</div>
+    </div>`;
 
-  // 달력 그리드
+  // ── 달력 그리드 ──
   const firstDay=new Date(calYear,calMonth,1).getDay();
   const lastDate=new Date(calYear,calMonth+1,0).getDate();
   const todStr=todayStr();
@@ -708,37 +721,41 @@ function renderCalendar(){
   ['일','월','화','수','목','금','토'].forEach(d=>{html+=`<div class="cal-day-header">${d}</div>`;});
   const prevLastDate=new Date(calYear,calMonth,0).getDate();
   for(let i=0;i<firstDay;i++){const d=prevLastDate-firstDay+i+1;html+=`<div class="cal-cell other-month"><div class="cal-date">${d}</div></div>`;}
+
   for(let d=1;d<=lastDate;d++){
     const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isToday=dateStr===todStr;
     const dayTasks=allCal.filter(t=>t.date===dateStr);
     let evHtml='';
+
+    // 각 일정: "작품명 · 일정유형" 형태로 표시
     dayTasks.slice(0,3).forEach(t=>{
       const w=works.find(w=>w.id===t.workId);
-      const cls=t.done?'cal-ev-done':['deadline','conti'].includes(t.type)?'cal-ev-deadline':t.type==='etc'?'cal-ev-other':'cal-ev-other';
-      const title=`${w?w.title:''}${calWorkId!=='all'?'':' · '+typeLabel[t.type]}`;
-      evHtml+=`<div class="cal-event ${cls}" title="${w?w.title:''} · ${typeLabel[t.type]}">${calWorkId==='all'?(w?w.title.slice(0,5):''):typeLabel[t.type]}</div>`;
+      const wTitle=w?w.title:'';
+      const label=calWorkId==='all'
+        ? `${wTitle} ${typeLabel[t.type]}`   // 전체 보기: 작품명 + 유형
+        : typeLabel[t.type];                  // 특정 작품: 유형만
+      const cls=t.done?'cal-ev-done':t.type==='deadline'?'cal-ev-deadline':t.type==='conti'?'cal-ev-conti':'cal-ev-other';
+      evHtml+=`<div class="cal-event ${cls}" title="${wTitle} · ${typeLabel[t.type]}${t.memo?' · '+t.memo:''}">${label}</div>`;
     });
-    if(dayTasks.length>3)evHtml+=`<div class="cal-more">+${dayTasks.length-3}건 더</div>`;
+    if(dayTasks.length>3)evHtml+=`<div class="cal-more">+${dayTasks.length-3}건</div>`;
     html+=`<div class="cal-cell ${isToday?'today':''}"><div class="cal-date">${d}</div>${evHtml}</div>`;
   }
+
   const remain=(7-((firstDay+lastDate)%7))%7;
   for(let i=1;i<=remain;i++){html+=`<div class="cal-cell other-month"><div class="cal-date">${i}</div></div>`;}
   document.getElementById('calGrid').innerHTML=html;
 
-  // 이달 일정 리스트
-  const selectedWork=calWorkId!=='all'?works.find(w=>w.id===calWorkId):null;
-  const listTitle=selectedWork?`${selectedWork.title} · ${calYear}년 ${months[calMonth]} 일정 목록`:`${calYear}년 ${months[calMonth]} 전체 일정 목록`;
-  document.getElementById('calListTitle').textContent=listTitle;
+  // ── 이달 일정 리스트 ──
+  document.getElementById('calListTitle').textContent=
+    `${selectedWork?selectedWork.title+' · ':''}${calYear}년 ${months[calMonth]} 전체 일정 목록`;
 
   if(!monthTasks.length){
     document.getElementById('calList').innerHTML=`<div class="cal-empty-month">이달 등록된 일정이 없어요</div>`;
     return;
   }
-
-  const sorted=monthTasks.sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:0);
   let listHtml='';
-  sorted.forEach(t=>{
+  monthTasks.sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:0).forEach(t=>{
     const w=works.find(w=>w.id===t.workId);
     const diff=dayDiff(t.date);
     listHtml+=`<div class="cal-list-row ${t.done?'done':''}">
@@ -808,7 +825,7 @@ function openTaskModal(wId,taskId){
   document.getElementById('taskModalTitle').textContent=t?'일정 수정':'일정 추가';
   const opts=works.map(w=>`<option value="${w.id}" ${(wId===w.id||t?.workId===w.id)?'selected':''}>${w.title}</option>`).join('');
   document.getElementById('tm-work').innerHTML=opts;
-  if(t){document.getElementById('tm-work').value=t.workId;}
+  if(t)document.getElementById('tm-work').value=t.workId;
   updateTmAuthors();
   if(t){
     document.getElementById('tm-author').value=t.author;
@@ -817,6 +834,7 @@ function openTaskModal(wId,taskId){
     document.getElementById('tm-time').value=t.time||'';
     document.getElementById('tm-memo').value=t.memo||'';
   }else{
+    // KST 기준 오늘 날짜로 설정
     document.getElementById('tm-date').value=todayStr();
     document.getElementById('tm-time').value='';
     document.getElementById('tm-memo').value='';

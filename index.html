@@ -688,7 +688,7 @@ window._saveData=saveToFirebase;
 </script>
 
 <script>
-let works=[],tasks=[],notice='',nextId=1,slackWebhook='',slackTime='';
+let works=[],tasks=[],notice='',nextId=1,slackWebhook='',slackTime='09:00';
 function saveData(){if(window._saveData)window._saveData();}
 
 function todayStr(){const now=new Date(),kst=new Date(now.getTime()+9*60*60*1000);return kst.toISOString().slice(0,10);}
@@ -921,19 +921,19 @@ function renderWorks(){
         const diff=dayDiff(t.date),rc=t.done?'done-row':diff<=0?'overdue':diff<=3?'imminent':'';
         th+=`<div class="task-row ${rc}"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}"></span><span class="task-text">${typeLabel[t.type]||t.type}${t.memo?` <span class="task-memo">· ${t.memo}</span>`:''}</span>${t.time?`<span class="task-time">${t.time}</span>`:''}<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0">${t.date}</span><span class="dday ${ddayCls(diff,t.done)}">${ddayLabel(diff)}</span><button class="done-btn ${t.done?'checked':''}" onclick="toggleDone(${t.id})">✓</button><div class="task-actions"><button class="task-act-btn" onclick="openTaskModal('${w.id}',${t.id})">✎</button><button class="task-act-btn del" onclick="deleteTask(${t.id})">✕</button></div></div>`;
       }
-      const wMemo=w.memo||'';
-      let memoHtml=`<div class="memo-area">
-        <div class="memo-header">
-          <span class="memo-title">📝 작품 메모</span>
-          <button class="memo-edit-btn" onclick="openMemoModal('${w.id}',event)">수정</button>
-        </div>
-        <div class="memo-content">${wMemo?wMemo.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>'}</div>
-      </div>`;
       mHtml+=`<div class="member-row">
         <div class="member-info"><div class="member-name">${wr.name}</div><div class="member-role-badge">${wr.role}작가</div></div>
         <div class="member-tasks-list">${th}</div>
       </div>`;
     }
+    const wMemo=w.memo||'';
+    const memoHtml=`<div class="memo-area">
+      <div class="memo-header">
+        <span class="memo-title">📝 작품 메모</span>
+        <button class="memo-edit-btn" onclick="openMemoModal('${w.id}',event)">수정</button>
+      </div>
+      <div class="memo-content">${wMemo?wMemo.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>'}</div>
+    </div>`;
     mHtml+=`</div>`+memoHtml;
 
     html+=`<div class="work-card ${urgCls}">

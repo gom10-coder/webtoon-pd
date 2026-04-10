@@ -702,7 +702,20 @@ function initials(n){return n.replace(/\s*작가$/,'').slice(0,2);}
 
 const typeLabel={deadline:'원고 마감',conti:'콘티 마감',feedback:'피드백 작성',reply:'답장 대기',meeting:'미팅/통화','contract-wait':'계약서 대기',cover:'표지 작업',proposal:'기획안 전달',charasheet:'캐시트',etc:'기타'};
 const typeDotCls={deadline:'td-deadline',conti:'td-conti',feedback:'td-feedback',reply:'td-reply',meeting:'td-meeting','contract-wait':'td-contract-wait',cover:'td-cover',proposal:'td-proposal',charasheet:'td-charasheet',etc:'td-etc'};
-const typeEvCls={deadline:'cal-ev-deadline',conti:'cal-ev-conti',feedback:'cal-ev-feedback',reply:'cal-ev-reply',meeting:'cal-ev-meeting','contract-wait':'cal-ev-contract-wait',cover:'cal-ev-cover',proposal:'cal-ev-proposal',charasheet:'cal-ev-charasheet',etc:'cal-ev-etc'};
+// 달력 업무별 인라인 스타일 (CSS 클래스 충돌 방지용)
+const typeEvStyle={
+  deadline:'background:#FAEAEA;color:#7A1A1A;border-left:3px solid #C0392B',
+  conti:   'background:#F5EEE8;color:#5A2A0A;border-left:3px solid #8B4513',
+  feedback:'background:#F5EEF8;color:#4A1A7A;border-left:3px solid #6A1A7A',
+  reply:   'background:#FDF3E7;color:#7A4A0A;border-left:3px solid #B8620A',
+  meeting: 'background:#EAF0F8;color:#1A3A6A;border-left:3px solid #1A4A7A',
+  'contract-wait':'background:#FFF0E0;color:#7A4A0A;border-left:3px solid #E5842A',
+  cover:   'background:#FDE8F5;color:#6A0A5A;border-left:3px solid #A0309A',
+  proposal:'background:#E8F0FD;color:#1A2A6A;border-left:3px solid #3050C0',
+  charasheet:'background:#F0EAFA;color:#4A2A7A;border-left:3px solid #6A4A9A',
+  etc:     'background:#F0EDE8;color:#6B6560;border-left:3px solid #A09A93',
+};
+const typeEvDoneStyle='background:#EAF2EC;color:#1A3D26;border-left:3px solid #2D5A3D';
 
 function workUrgency(wId){const ts=tasks.filter(t=>t.workId===wId&&!t.done);if(!ts.length)return 999;return Math.min(...ts.map(t=>dayDiff(t.date)));}
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');setTimeout(()=>el.classList.remove('show'),2200);}
@@ -976,9 +989,9 @@ function toggleCalWorkDrop(){
   // 메뉴 아이템 업데이트
   let html='';
   works.forEach(w=>{
-    const checked=calSelectedWorkIds.has(w.id);
-    html+=`<div class="cal-work-drop-item" onclick="toggleCalWork('${w.id}')">
-      <div style="width:14px;height:14px;border-radius:3px;border:1.5px solid ${checked?'var(--accent)':' var(--border2)'};background:${checked?'var(--accent)':'transparent'};display:flex;align-items:center;justify-content:center;font-size:9px;color:${checked?'#fff':'transparent'};flex-shrink:0">✓</div>
+    const selected=calSelectedWorkIds.has(w.id);
+    html+=`<div class="cal-work-drop-item" onclick="toggleCalWork('${w.id}')" style="${selected?'background:var(--accent-light);color:var(--accent-text);font-weight:500':''}">
+      <div style="width:8px;height:8px;border-radius:50%;background:${selected?'var(--accent)':'var(--border2)'};flex-shrink:0"></div>
       <span>${w.title}</span>
     </div>`;
   });
@@ -988,12 +1001,15 @@ function toggleCalWorkDrop(){
 }
 
 function toggleCalWork(wId){
-  if(calSelectedWorkIds.has(wId))calSelectedWorkIds.delete(wId);
-  else calSelectedWorkIds.add(wId);
+  // 단일 선택: 이미 선택된 것이면 해제, 아니면 기존 초기화 후 새로 선택
+  if(calSelectedWorkIds.has(wId)){
+    calSelectedWorkIds.clear();
+  } else {
+    calSelectedWorkIds.clear();
+    calSelectedWorkIds.add(wId);
+  }
   renderCalendar();
-  // 메뉴 다시 갱신 (체크박스 업데이트)
-  toggleCalWorkDrop();
-  toggleCalWorkDrop();
+  document.getElementById('calWorkDropMenu').classList.add('hidden');
 }
 
 function getCalTasks(){
@@ -1061,8 +1077,8 @@ function renderCalendar(){
     dayTasks.slice(0,maxShow).forEach(t=>{
       const w=works.find(w=>w.id===t.workId);
       const label=`${w?w.title:''} ${typeLabel[t.type]}`;
-      const evCls=t.done?'cal-ev-done':(typeEvCls[t.type]||'cal-ev-etc');
-      evHtml+=`<div class="cal-event ${evCls}" draggable="true" data-task-id="${t.id}" title="${label}">${label}</div>`;
+      const evStyle=t.done?typeEvDoneStyle:(typeEvStyle[t.type]||typeEvStyle.etc);
+      evHtml+=`<div class="cal-event" style="${evStyle};border-radius:3px;font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;cursor:grab" draggable="true" data-task-id="${t.id}" title="${label}">${label}</div>`;
     });
     if(dayTasks.length>maxShow){
       const remaining=dayTasks.length-maxShow;
@@ -1110,8 +1126,8 @@ function openCalPopup(dateStr,event){
   let html='';
   dayTasks.forEach(t=>{
     const w=works.find(w=>w.id===t.workId);
-    const evCls=t.done?'cal-ev-done':(typeEvCls[t.type]||'cal-ev-etc');
-    html+=`<div class="cal-popup-event ${evCls}"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span><span style="font-size:12px">${w?w.title+' · ':''} ${typeLabel[t.type]||t.type}${t.memo?' · '+t.memo:''}</span></div>`;
+    const evStyle=t.done?typeEvDoneStyle:(typeEvStyle[t.type]||typeEvStyle.etc);
+    html+=`<div class="cal-popup-event" style="${evStyle};border-radius:6px;padding:5px 8px;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span><span style="font-size:12px">${w?w.title+' · ':''} ${typeLabel[t.type]||t.type}${t.memo?' · '+t.memo:''}</span></div>`;
   });
   document.getElementById('calPopupList').innerHTML=html;
   const rect=event.target.getBoundingClientRect();

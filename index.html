@@ -704,16 +704,16 @@ const typeLabel={deadline:'원고 마감',conti:'콘티 마감',feedback:'피드
 const typeDotCls={deadline:'td-deadline',conti:'td-conti',feedback:'td-feedback',reply:'td-reply',meeting:'td-meeting','contract-wait':'td-contract-wait',cover:'td-cover',proposal:'td-proposal',charasheet:'td-charasheet',etc:'td-etc'};
 // 달력 업무별 인라인 스타일 (CSS 클래스 충돌 방지용)
 const typeEvStyle={
-  deadline:'background:#FAEAEA;color:#7A1A1A;border-left:3px solid #C0392B',
-  conti:   'background:#F5EEE8;color:#5A2A0A;border-left:3px solid #8B4513',
-  feedback:'background:#F5EEF8;color:#4A1A7A;border-left:3px solid #6A1A7A',
-  reply:   'background:#FDF3E7;color:#7A4A0A;border-left:3px solid #B8620A',
-  meeting: 'background:#EAF0F8;color:#1A3A6A;border-left:3px solid #1A4A7A',
-  'contract-wait':'background:#FFF0E0;color:#7A4A0A;border-left:3px solid #E5842A',
-  cover:   'background:#FDE8F5;color:#6A0A5A;border-left:3px solid #A0309A',
-  proposal:'background:#E8F0FD;color:#1A2A6A;border-left:3px solid #3050C0',
-  charasheet:'background:#F0EAFA;color:#4A2A7A;border-left:3px solid #6A4A9A',
-  etc:     'background:#F0EDE8;color:#6B6560;border-left:3px solid #A09A93',
+  deadline:       'background:#FAEAEA;color:#7A1A1A;border-left:3px solid #C0392B',
+  conti:          'background:#FDF0E6;color:#6B2D00;border-left:3px solid #C06020',
+  feedback:       'background:#F3EEF8;color:#3D1060;border-left:3px solid #7040B0',
+  reply:          'background:#FFFAE0;color:#6B5000;border-left:3px solid #C0A000',
+  meeting:        'background:#E6F2FF;color:#003080;border-left:3px solid #1060C0',
+  'contract-wait':'background:#E6FFF5;color:#004D30;border-left:3px solid #009060',
+  cover:          'background:#FFE6F0;color:#700040;border-left:3px solid #C02070',
+  proposal:       'background:#E6E8FF;color:#18107A;border-left:3px solid #2030C0',
+  charasheet:     'background:#FFF0FA;color:#600050;border-left:3px solid #A030A0',
+  etc:            'background:#F0EDE8;color:#5A5450;border-left:3px solid #A09A93',
 };
 const typeEvDoneStyle='background:#EAF2EC;color:#1A3D26;border-left:3px solid #2D5A3D';
 
@@ -804,7 +804,7 @@ function toggleNoticeEdit(){
 function renderTodo(){
   const ts=todayStr(),d=new Date(ts),days=['일','월','화','수','목','금','토'];
   document.getElementById('todoDate').textContent=`${d.getMonth()+1}월 ${d.getDate()}일 (${days[d.getDay()]})`;
-  const todayTasks=tasks.filter(t=>dayDiff(t.date)<=0).sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return dayDiff(a.date)-dayDiff(b.date);});
+  const todayTasks=tasks.filter(t=>t.date===todayStr()||(dayDiff(t.date)<0&&!t.done)).sort((a,b)=>{if(a.done!==b.done)return a.done?1:-1;return dayDiff(a.date)-dayDiff(b.date);});
   const pending=todayTasks.filter(t=>!t.done).length;
   document.getElementById('todoCount').textContent=pending>0?`미처리 ${pending}건`:'';
   if(!todayTasks.length){document.getElementById('todoList').innerHTML=`<div class="todo-empty">🎉 오늘 할 일이 없어요!</div>`;return;}
@@ -842,6 +842,13 @@ function setTypeFilter(f){
   document.getElementById('typeDropLabel').textContent=label;
   document.getElementById('typeDropBtn').className='drop-filter-btn'+(f!=='all'?' active-filter':'');
   document.getElementById('typeDrop').classList.add('hidden');
+  // 유형 필터 선택 시 해당 유형 일정이 있는 작품 카드 자동 열기
+  if(f!=='all'){
+    works.forEach(w=>{
+      const hasType=tasks.some(t=>t.workId===w.id&&t.type===f);
+      if(hasType)expanded[w.id]=true;
+    });
+  }
   render();
 }
 function setTab(f){
@@ -1077,7 +1084,7 @@ function renderCalendar(){
     dayTasks.slice(0,maxShow).forEach(t=>{
       const w=works.find(w=>w.id===t.workId);
       const label=`${w?w.title:''} ${typeLabel[t.type]}`;
-      const evStyle=t.done?typeEvDoneStyle:(typeEvStyle[t.type]||typeEvStyle.etc);
+      const evStyle=(typeEvStyle[t.type]||typeEvStyle.etc)+(t.done?";opacity:0.45":"");
       evHtml+=`<div class="cal-event" style="${evStyle};border-radius:3px;font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5;cursor:grab" draggable="true" data-task-id="${t.id}" title="${label}">${label}</div>`;
     });
     if(dayTasks.length>maxShow){
@@ -1126,7 +1133,7 @@ function openCalPopup(dateStr,event){
   let html='';
   dayTasks.forEach(t=>{
     const w=works.find(w=>w.id===t.workId);
-    const evStyle=t.done?typeEvDoneStyle:(typeEvStyle[t.type]||typeEvStyle.etc);
+    const evStyle=(typeEvStyle[t.type]||typeEvStyle.etc)+(t.done?";opacity:0.45":"");
     html+=`<div class="cal-popup-event" style="${evStyle};border-radius:6px;padding:5px 8px;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span><span style="font-size:12px">${w?w.title+' · ':''} ${typeLabel[t.type]||t.type}${t.memo?' · '+t.memo:''}</span></div>`;
   });
   document.getElementById('calPopupList').innerHTML=html;

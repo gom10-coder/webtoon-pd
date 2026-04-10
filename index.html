@@ -147,6 +147,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .platform-chip{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:20px;font-size:12px;font-weight:500;border:1px solid transparent}
 .chip-serializing{background:#E8F5EE;border-color:#A8D8BB;color:#1A3D26}
 .chip-planned{background:var(--blue-light);border-color:#A8C4E0;color:var(--blue)}
+.chip-hiatus{background:#FDF3E7;border-color:#F0C870;color:#7A5000}
+.chip-completed{background:#F0EDE8;border-color:#C0BAB0;color:#5A5450}
+.chip-production{background:#F0EAFA;border-color:#C0A8E0;color:#4A2A7A}
 .chip-none{background:var(--surface);border-color:var(--border);color:var(--text2)}
 .chip-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 .chip-dot.s{background:#2D8A52}.chip-dot.p{background:#2D6FAA}.chip-dot.n{background:#B0AAA3}
@@ -312,6 +315,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .poc-ep{font-size:13px;font-family:'DM Mono',monospace;font-weight:500}
 .poc-status-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:10px}
 .psb-s{background:#E8F5EE;color:#1A3D26}.psb-p{background:var(--blue-light);color:var(--blue)}.psb-n{background:var(--surface2);color:var(--text3)}
+.psb-h{background:#FDF3E7;color:#7A5000}.psb-c{background:#F0EDE8;color:#5A5450}.psb-pr{background:#F0EAFA;color:#4A2A7A}
 
 /* 슬랙 */
 .slack-setup-box{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:24px;margin-bottom:20px;box-shadow:var(--shadow)}
@@ -647,10 +651,12 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     </div>
     <div class="form-group" id="pm-custom-group" style="display:none"><label class="form-label">플랫폼 이름</label><input class="form-input" id="pm-custom"/></div>
     <div class="form-group"><label class="form-label">연재 상태</label>
-      <div class="status-options">
+      <div style="display:flex;gap:6px;flex-wrap:wrap">
         <div class="status-opt active-s" id="sopt-serializing" onclick="selectStatus('serializing')">연재 중</div>
+        <div class="status-opt" id="sopt-hiatus" onclick="selectStatus('hiatus')">휴재</div>
+        <div class="status-opt" id="sopt-completed" onclick="selectStatus('completed')">완결</div>
         <div class="status-opt" id="sopt-planned" onclick="selectStatus('planned')">연재 예정</div>
-        <div class="status-opt" id="sopt-none" onclick="selectStatus('none')">미연재</div>
+        <div class="status-opt" id="sopt-production" onclick="selectStatus('production')">제작 중</div>
       </div>
     </div>
     <div class="form-group" id="pm-ep-group"><label class="form-label">현재 업로드 화수</label><input class="form-input" id="pm-ep" type="number" min="1" placeholder="예: 42"/><div class="form-hint">모르면 비워두세요</div></div>
@@ -665,6 +671,23 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <label style="display:flex;align-items:center;gap:4px;font-size:13px;cursor:pointer"><input type="checkbox" class="pm-day-cb" value="6" style="accent-color:var(--accent)"> 토</label>
       </div>
       <div class="form-hint">선택한 요일이 달력에 업로드일로 자동 표시돼요</div>
+    </div>
+    <div class="form-group" id="pm-hiatus-pattern-group" style="display:none">
+      <label class="form-label">정기 휴재 패턴</label>
+      <select class="form-select" id="pm-hiatus-pattern" onchange="toggleHiatusBase()">
+        <option value="none">없음 (매주 연재)</option>
+        <option value="biweekly-odd">격주 휴재 (홀수 주 연재)</option>
+        <option value="biweekly-even">격주 휴재 (짝수 주 연재)</option>
+        <option value="4-1">4주 연재 후 1주 휴재</option>
+        <option value="5-1">5주 연재 후 1주 휴재</option>
+        <option value="month-first">매월 첫째 주 휴재</option>
+        <option value="month-last">매월 마지막 주 휴재</option>
+      </select>
+    </div>
+    <div class="form-group" id="pm-hiatus-base-group" style="display:none">
+      <label class="form-label">패턴 기준 시작일</label>
+      <input class="form-input" id="pm-hiatus-base" type="date"/>
+      <div class="form-hint">연재가 시작된 날짜를 입력하면 휴재 주를 자동 계산해요</div>
     </div>
     <div class="form-group"><label class="form-label">플랫폼 링크 (선택)</label><input class="form-input" id="pm-link" placeholder="https://..."/></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('platformModal')">취소</button><button class="btn btn-primary" onclick="savePlatform()">저장</button></div>
@@ -918,10 +941,9 @@ function renderWorks(){
 
     let pHtml=`<div class="platform-area"><div class="platform-row"><span class="platform-label">플랫폼</span>`;
     for(const p of w.platforms){
-      const dc=p.status==='serializing'?'s':p.status==='planned'?'p':'n';
-      const cc=p.status==='serializing'?'chip-serializing':p.status==='planned'?'chip-planned':'chip-none';
-      const st=p.status==='serializing'?'연재 중':p.status==='planned'?'연재 예정':'미연재';
-      pHtml+=`<div class="platform-chip ${cc}"><span class="chip-dot ${dc}"></span><span>${p.name}</span>${p.status==='serializing'?`<span class="chip-ep">${p.episode!=null?p.episode+'화':'?화'}</span>`:`<span style="font-size:10px">${st}</span>`}<span class="chip-actions"><button class="chip-btn chip-btn-edit" onclick="openPlatformModal('${w.id}','${p.name}',event)">✎</button><button class="chip-btn chip-btn-del" onclick="removePlatform('${w.id}','${p.name}',event)">✕</button></span></div>`;
+      const stMap={serializing:{cls:'chip-serializing',dot:'s',label:'연재 중'},hiatus:{cls:'chip-hiatus',dot:'h',label:'휴재'},completed:{cls:'chip-completed',dot:'c',label:'완결'},planned:{cls:'chip-planned',dot:'p',label:'연재 예정'},production:{cls:'chip-production',dot:'pr',label:'제작 중'}};
+      const si=stMap[p.status]||stMap['planned'];
+      pHtml+=`<div class="platform-chip ${si.cls}"><span class="chip-dot ${si.dot}"></span><span>${p.name}</span>${p.status==='serializing'?`<span class="chip-ep">${p.episode!=null?p.episode+'화':'?화'}</span>`:`<span style="font-size:10px">${si.label}</span>`}<span class="chip-actions"><button class="chip-btn chip-btn-edit" onclick="openPlatformModal('${w.id}','${p.name}',event)">✎</button><button class="chip-btn chip-btn-del" onclick="removePlatform('${w.id}','${p.name}',event)">✕</button></span></div>`;
     }
     pHtml+=`<button class="add-platform-chip" onclick="openPlatformModal('${w.id}',null,event)">+ 플랫폼</button></div></div>`;
 
@@ -973,7 +995,7 @@ function renderWorks(){
 
 function renderPlatformOverview(){
   let html='';
-  for(const w of works){if(!w.platforms.length)continue;let rows='';for(const p of w.platforms){const sc=p.status==='serializing'?'psb-s':p.status==='planned'?'psb-p':'psb-n';const st=p.status==='serializing'?'연재 중':p.status==='planned'?'연재 예정':'미연재';rows+=`<div class="poc-platform-row"><span class="poc-platform-name">${p.name}</span>${p.status==='serializing'?`<span class="poc-ep">${p.episode!=null?p.episode+'화':'-'}</span>`:''}<span class="poc-status-badge ${sc}">${st}</span>${p.link?`<a href="${p.link}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗</a>`:''}</div>`;}html+=`<div class="platform-overview-card"><div class="poc-work">${w.title}${w.contracted?` <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:10px;font-weight:700">📋</span>`:''}</div>${rows}</div>`;}
+  for(const w of works){if(!w.platforms.length)continue;let rows='';for(const p of w.platforms){const stMap={serializing:{cls:'psb-s',label:'연재 중'},hiatus:{cls:'psb-h',label:'휴재'},completed:{cls:'psb-c',label:'완결'},planned:{cls:'psb-p',label:'연재 예정'},production:{cls:'psb-pr',label:'제작 중'}};const si=stMap[p.status]||stMap['planned'];rows+=`<div class="poc-platform-row"><span class="poc-platform-name">${p.name}</span>${p.status==='serializing'?`<span class="poc-ep">${p.episode!=null?p.episode+'화':'-'}</span>`:''}<span class="poc-status-badge ${si.cls}">${si.label}</span>${p.link?`<a href="${p.link}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗</a>`:''}</div>`;}html+=`<div class="platform-overview-card"><div class="poc-work">${w.title}${w.contracted?` <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:10px;font-weight:700">📋</span>`:''}</div>${rows}</div>`;}
   if(!html)html=`<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">등록된 플랫폼이 없어요</div></div>`;
   document.getElementById('platformOverview').innerHTML=html;
 }
@@ -1010,6 +1032,44 @@ function renderStats(){
       <div class="stat-bar-wrap"><div class="stat-bar" style="width:${monthTasks.length?Math.round(monthTasks.filter(t=>t.done).length/monthTasks.length*100):0}%"></div></div>
     </div>
     <div class="stat-card"><div class="stat-card-title">📚 작품별 처리율</div>${workStatHtml||'<div style="font-size:13px;color:var(--text3);text-align:center;padding:20px 0">이달 일정이 없어요</div>'}</div>`;
+}
+
+function isHiatusDate(dateStr,p){
+  const pat=p.hiatusPattern||'none';
+  if(pat==='none')return false;
+  const date=new Date(dateStr);
+  const dayOfWeek=date.getDay();
+  // 해당 주의 월요일 기준 ISO 주차 계산
+  function getWeekNum(d){
+    const jan1=new Date(d.getFullYear(),0,1);
+    return Math.ceil(((d-jan1)/86400000+jan1.getDay()+1)/7);
+  }
+  const weekNum=getWeekNum(date);
+  if(pat==='biweekly-odd')return weekNum%2===0; // 홀수 주만 연재 → 짝수 주 휴재
+  if(pat==='biweekly-even')return weekNum%2===1; // 짝수 주만 연재 → 홀수 주 휴재
+  if(pat==='month-first'){
+    // 이달 첫 번째 해당 요일 주인지
+    const firstOfMonth=new Date(date.getFullYear(),date.getMonth(),1);
+    const firstDow=firstOfMonth.getDay();
+    const firstOccurrence=1+((dayOfWeek-firstDow+7)%7);
+    return date.getDate()===firstOccurrence;
+  }
+  if(pat==='month-last'){
+    const lastOfMonth=new Date(date.getFullYear(),date.getMonth()+1,0);
+    const lastDow=lastOfMonth.getDay();
+    const lastOccurrence=lastOfMonth.getDate()-((lastDow-dayOfWeek+7)%7);
+    return date.getDate()===lastOccurrence;
+  }
+  if((pat==='4-1'||pat==='5-1')&&p.hiatusBase){
+    const base=new Date(p.hiatusBase);
+    const cycleLen=pat==='4-1'?5:6; // 연재+휴재 합산 주 수
+    const restWeek=pat==='4-1'?4:5; // 몇 번째 주가 휴재인지 (0-indexed)
+    const diffMs=date-base;
+    const diffDays=Math.floor(diffMs/86400000);
+    const diffWeeks=Math.floor(diffDays/7);
+    return (diffWeeks%cycleLen)===restWeek;
+  }
+  return false;
 }
 
 // ── 달력 다중 작품 필터 ──
@@ -1106,17 +1166,18 @@ function renderCalendar(){
   works.forEach(w=>{
     if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
     w.platforms.forEach(p=>{
-      if(p.status==='serializing'&&p.uploadDays&&p.uploadDays.length>0){
-        p.uploadDays.forEach(dow=>{
-          for(let d=1;d<=lastDate;d++){
-            const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            if(new Date(dateStr).getDay()===dow){
-              if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
-              uploadDayMap[dateStr].push({work:w.title,platform:p.name});
-            }
-          }
-        });
-      }
+      if(p.status!=='serializing')return; // 휴재/완결/제작중은 표시 안함
+      if(!p.uploadDays||p.uploadDays.length===0)return;
+      p.uploadDays.forEach(dow=>{
+        for(let d=1;d<=lastDate;d++){
+          const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          if(new Date(dateStr).getDay()!==dow)continue;
+          // 휴재 패턴 체크
+          if(isHiatusDate(dateStr,p))continue;
+          if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
+          uploadDayMap[dateStr].push({work:w.title,platform:p.name});
+        }
+      });
     });
   });
   for(let d=1;d<=lastDate;d++){
@@ -1349,9 +1410,20 @@ function openPlatformModal(wId,platformName,e){
     document.getElementById('pm-link').value='';
     selectedStatus='serializing';
   }
-  ['serializing','planned','none'].forEach(s=>{document.getElementById('sopt-'+s).className='status-opt'+(s===selectedStatus?(s==='serializing'?' active-s':s==='planned'?' active-p':' active-n'):'');});
-  document.getElementById('pm-ep-group').style.display=selectedStatus==='serializing'?'':'none';
-  document.getElementById('pm-days-group').style.display=selectedStatus==='serializing'?'':'none';
+  ['serializing','hiatus','completed','planned','production'].forEach(s=>{
+    const el=document.getElementById('sopt-'+s);
+    if(!el)return;
+    el.className='status-opt'+(s===selectedStatus?(s==='serializing'?' active-s':s==='completed'?' active-n':' active-p'):'');
+  });
+  const isActive=selectedStatus==='serializing';
+  document.getElementById('pm-ep-group').style.display=isActive?'':'none';
+  document.getElementById('pm-days-group').style.display=isActive?'':'none';
+  document.getElementById('pm-hiatus-pattern-group').style.display=isActive?'':'none';
+  // 정기 휴재 패턴 복원
+  const pat=existingP?.hiatusPattern||'none';
+  document.getElementById('pm-hiatus-pattern').value=pat;
+  document.getElementById('pm-hiatus-base').value=existingP?.hiatusBase||'';
+  document.getElementById('pm-hiatus-base-group').style.display=(isActive&&pat!=='none'&&!pat.startsWith('month'))?'':'none';
   // 요일 체크박스 초기화
   document.querySelectorAll('.pm-day-cb').forEach(cb=>{
     cb.checked=existingP&&existingP.uploadDays?(existingP.uploadDays.includes(parseInt(cb.value))):false;
@@ -1361,27 +1433,40 @@ function openPlatformModal(wId,platformName,e){
 function toggleCustomPlatform(){document.getElementById('pm-custom-group').style.display=document.getElementById('pm-name').value==='__custom'?'':'none';}
 function selectStatus(s){
   selectedStatus=s;
-  document.getElementById('sopt-serializing').className='status-opt'+(s==='serializing'?' active-s':'');
-  document.getElementById('sopt-planned').className='status-opt'+(s==='planned'?' active-p':'');
-  document.getElementById('sopt-none').className='status-opt'+(s==='none'?' active-n':'');
-  document.getElementById('pm-ep-group').style.display=s==='serializing'?'':'none';
-  document.getElementById('pm-days-group').style.display=s==='serializing'?'':'none';
+  const isActive=s==='serializing';
+  ['serializing','hiatus','completed','planned','production'].forEach(st=>{
+    const el=document.getElementById('sopt-'+st);
+    if(!el)return;
+    el.className='status-opt'+(s===st?(st==='serializing'?' active-s':st==='completed'?' active-n':' active-p'):'');
+  });
+  document.getElementById('pm-ep-group').style.display=isActive?'':'none';
+  document.getElementById('pm-days-group').style.display=isActive?'':'none';
+  document.getElementById('pm-hiatus-pattern-group').style.display=isActive?'':'none';
+  const patternVal=document.getElementById('pm-hiatus-pattern')?.value||'none';
+  document.getElementById('pm-hiatus-base-group').style.display=(isActive&&patternVal!=='none'&&!patternVal.startsWith('month'))?'':'none';
+}
+function toggleHiatusBase(){
+  const v=document.getElementById('pm-hiatus-pattern').value;
+  document.getElementById('pm-hiatus-base-group').style.display=(v!=='none'&&!v.startsWith('month'))?'':'none';
 }
 function savePlatform(){
   const w=works.find(w=>w.id===platformTargetWorkId);if(!w)return;
-  const ep=selectedStatus==='serializing'?(parseInt(document.getElementById('pm-ep').value)||null):null;
+  const isActive=selectedStatus==='serializing';
+  const ep=isActive?(parseInt(document.getElementById('pm-ep').value)||null):null;
   const link=document.getElementById('pm-link').value.trim();
-  const uploadDays=selectedStatus==='serializing'?[...document.querySelectorAll('.pm-day-cb:checked')].map(cb=>parseInt(cb.value)):[];
+  const uploadDays=isActive?[...document.querySelectorAll('.pm-day-cb:checked')].map(cb=>parseInt(cb.value)):[];
+  const hiatusPattern=isActive?(document.getElementById('pm-hiatus-pattern').value||'none'):'none';
+  const hiatusBase=document.getElementById('pm-hiatus-base').value||'';
   if(editingPlatformName){
     const p=w.platforms.find(p=>p.name===editingPlatformName);
-    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;}
+    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;p.hiatusPattern=hiatusPattern;p.hiatusBase=hiatusBase;}
     saveData();closeModal('platformModal');render();showToast('플랫폼을 수정했어요');
   } else {
     let name=document.getElementById('pm-name').value;
     if(name==='__custom')name=document.getElementById('pm-custom').value.trim();
     if(!name){alert('플랫폼을 선택해 주세요.');return;}
     if(w.platforms.find(p=>p.name===name)){alert('이미 등록된 플랫폼이에요.');return;}
-    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays});
+    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays,hiatusPattern,hiatusBase});
     saveData();closeModal('platformModal');render();showToast('플랫폼을 추가했어요');
   }
 }

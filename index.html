@@ -187,21 +187,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .add-task-link{font-size:12px;color:var(--text3);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;transition:color 0.1s}
 .add-task-link:hover{color:var(--accent)}
 
-/* 연락 이력 */
-.log-area{padding:0 18px 10px}
-.log-header{display:flex;align-items:center;justify-content:space-between;padding:8px 0 6px;border-top:1px dashed var(--border)}
-.log-title{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:0.04em}
-.log-add-btn{font-size:11px;color:var(--accent);background:none;border:1px solid var(--accent-light);border-radius:6px;padding:2px 7px;cursor:pointer;font-family:inherit}
-.log-add-btn:hover{background:var(--accent-light)}
-.log-list{display:flex;flex-direction:column;gap:5px}
-.log-item{display:flex;gap:8px;padding:7px 9px;border-radius:var(--radius);background:var(--surface2);border:1px solid var(--border)}
-.log-date{font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0;min-width:64px}
-.log-text{font-size:12px;color:var(--text);flex:1}
-.log-item-actions{display:flex;gap:3px;flex-shrink:0;opacity:0;transition:opacity 0.1s}
-.log-item:hover .log-item-actions{opacity:1}
-.log-act-btn{font-size:11px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0 2px}
-.log-act-btn:hover{color:var(--accent)}.log-act-btn.del:hover{color:var(--red)}
-.log-empty{font-size:12px;color:var(--text3);padding:4px 0}
+/* 작품 메모장 */
+.memo-area{padding:12px 18px;border-top:1px dashed var(--border);background:var(--surface)}
+.memo-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.memo-title{font-size:12px;font-weight:700;color:var(--text3);letter-spacing:0.04em}
+.memo-edit-btn{font-size:11px;color:var(--accent);background:none;border:1px solid var(--accent-light);border-radius:6px;padding:2px 8px;cursor:pointer;font-family:inherit}
+.memo-edit-btn:hover{background:var(--accent-light)}
+.memo-content{font-size:12px;color:var(--text2);line-height:1.7;white-space:pre-wrap;min-height:20px}
+.memo-empty{font-size:12px;color:var(--text3);font-style:italic}
 
 .empty-state{text-align:center;padding:60px 20px;color:var(--text3)}
 .empty-icon{font-size:40px;margin-bottom:12px}
@@ -611,19 +604,33 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="form-group"><label class="form-label">날짜</label><input class="form-input" id="tm-date" type="date"/></div>
       <div class="form-group"><label class="form-label">시간 (선택)</label><input class="form-input" id="tm-time" type="time"/></div>
     </div>
+    <div class="form-group"><label class="form-label">반복 설정</label>
+      <select class="form-select" id="tm-repeat" onchange="toggleRepeatEnd()">
+        <option value="none">반복 없음</option>
+        <option value="weekly">매주 반복</option>
+        <option value="biweekly">격주 반복</option>
+        <option value="monthly">매월 반복</option>
+      </select>
+    </div>
+    <div class="form-group" id="tm-repeat-end-group" style="display:none">
+      <label class="form-label">반복 종료일</label>
+      <input class="form-input" id="tm-repeat-end" type="date"/>
+      <div class="form-hint">이 날짜까지 반복 일정이 생성돼요</div>
+    </div>
     <div class="form-group"><label class="form-label">메모 (선택)</label><textarea class="form-textarea" id="tm-memo" placeholder="예: 14화 원고, 선화만"></textarea></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('taskModal')">취소</button><button class="btn btn-primary" onclick="saveTask()">저장</button></div>
   </div>
 </div>
 
-<!-- 모달: 연락 이력 -->
-<div class="modal-overlay" id="logModal">
+<!-- 모달: 작품 메모 -->
+<div class="modal-overlay" id="memoModal">
   <div class="modal">
-    <div class="modal-header"><div class="modal-title" id="logModalTitle">연락 이력 추가</div><button class="modal-close" onclick="closeModal('logModal')">✕</button></div>
-    <div class="form-group"><label class="form-label">작가</label><select class="form-select" id="lm-author"></select></div>
-    <div class="form-group"><label class="form-label">날짜</label><input class="form-input" id="lm-date" type="date"/></div>
-    <div class="form-group"><label class="form-label">내용</label><textarea class="form-textarea" id="lm-content" placeholder="예: 전화 통화 - 원고 2주 연장 요청"></textarea></div>
-    <div class="modal-footer"><button class="btn" onclick="closeModal('logModal')">취소</button><button class="btn btn-primary" onclick="saveLog()">저장</button></div>
+    <div class="modal-header"><div class="modal-title" id="memoModalTitle">작품 메모</div><button class="modal-close" onclick="closeModal('memoModal')">✕</button></div>
+    <div class="form-group">
+      <label class="form-label">메모</label>
+      <textarea class="form-textarea" id="mm-content" style="height:160px" placeholder="편집 방향, 작가 성향, 플랫폼 담당자 이름, 특이사항 등을 자유롭게 적어두세요"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('memoModal')">취소</button><button class="btn btn-primary" onclick="saveMemo()">저장</button></div>
   </div>
 </div>
 
@@ -672,16 +679,16 @@ const firebaseConfig={apiKey:"AIzaSyCqUwH_Kc0kwYU3Fl95LyFx1eyXbjkIGLY",authDomai
 const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app),provider=new GoogleAuthProvider();
 let unsubscribe=null;
 function setSyncStatus(s,m){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncStatus').textContent=m;}
-async function saveToFirebase(){const u=auth.currentUser;if(!u)return;setSyncStatus('syncing','저장 중...');try{await setDoc(doc(db,"users",u.uid,"data","main"),{works,tasks,logs,notice,nextId,slackWebhook,slackTime,updatedAt:Date.now()});setSyncStatus('connected','동기화됨');}catch(e){setSyncStatus('error','저장 실패');}}
-function startListening(uid){if(unsubscribe)unsubscribe();unsubscribe=onSnapshot(doc(db,"users",uid,"data","main"),(snap)=>{if(snap.exists()){const d=snap.data();works=d.works||[];tasks=d.tasks||[];logs=d.logs||[];notice=d.notice||'';nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);slackWebhook=d.slackWebhook||'';slackTime=d.slackTime||'09:00';updateSlackUI();updateNoticeUI();}else{works=[];tasks=[];logs=[];notice='';nextId=1;saveToFirebase();}works.forEach(w=>{if(expanded[w.id]===undefined)expanded[w.id]=false;});render();document.getElementById('loadingOverlay').classList.add('hidden');setSyncStatus('connected','동기화됨');},()=>{setSyncStatus('error','연결 오류');document.getElementById('loadingOverlay').classList.add('hidden');});}
+async function saveToFirebase(){const u=auth.currentUser;if(!u)return;setSyncStatus('syncing','저장 중...');try{await setDoc(doc(db,"users",u.uid,"data","main"),{works,tasks,notice,nextId,slackWebhook,slackTime,updatedAt:Date.now()});setSyncStatus('connected','동기화됨');}catch(e){setSyncStatus('error','저장 실패');}}
+function startListening(uid){if(unsubscribe)unsubscribe();unsubscribe=onSnapshot(doc(db,"users",uid,"data","main"),(snap)=>{if(snap.exists()){const d=snap.data();works=d.works||[];tasks=d.tasks||[];notice=d.notice||'';nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);slackWebhook=d.slackWebhook||'';slackTime=d.slackTime||'09:00';updateSlackUI();updateNoticeUI();}else{works=[];tasks=[];notice='';nextId=1;saveToFirebase();}works.forEach(w=>{if(expanded[w.id]===undefined)expanded[w.id]=false;if(!w.memo)w.memo='';});render();document.getElementById('loadingOverlay').classList.add('hidden');setSyncStatus('connected','동기화됨');},()=>{setSyncStatus('error','연결 오류');document.getElementById('loadingOverlay').classList.add('hidden');});}
 window.loginWithGoogle=async()=>{try{await signInWithPopup(auth,provider);}catch(e){alert('로그인에 실패했어요.');}};
 window.logout=async()=>{if(unsubscribe)unsubscribe();await signOut(auth);};
-onAuthStateChanged(auth,(user)=>{if(user){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('loadingOverlay').classList.remove('hidden');document.getElementById('userAvatar').src=user.photoURL||'';document.getElementById('userName').textContent=user.displayName||user.email;document.getElementById('userInfo').style.display='flex';setSyncStatus('syncing','연결 중...');startListening(user.uid);}else{document.getElementById('loginScreen').classList.remove('hidden');document.getElementById('loadingOverlay').classList.add('hidden');document.getElementById('userInfo').style.display='none';works=[];tasks=[];logs=[];notice='';nextId=1;}});
+onAuthStateChanged(auth,(user)=>{if(user){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('loadingOverlay').classList.remove('hidden');document.getElementById('userAvatar').src=user.photoURL||'';document.getElementById('userName').textContent=user.displayName||user.email;document.getElementById('userInfo').style.display='flex';setSyncStatus('syncing','연결 중...');startListening(user.uid);}else{document.getElementById('loginScreen').classList.remove('hidden');document.getElementById('loadingOverlay').classList.add('hidden');document.getElementById('userInfo').style.display='none';works=[];tasks=[];notice='';nextId=1;}});
 window._saveData=saveToFirebase;
 </script>
 
 <script>
-let works=[],tasks=[],logs=[],notice='',nextId=1,slackWebhook='',slackTime='09:00';
+let works=[],tasks=[],notice='',nextId=1,slackWebhook='',slackTime='';
 function saveData(){if(window._saveData)window._saveData();}
 
 function todayStr(){const now=new Date(),kst=new Date(now.getTime()+9*60*60*1000);return kst.toISOString().slice(0,10);}
@@ -731,7 +738,7 @@ let statYear=new Date().getFullYear(),statMonth=new Date().getMonth();
 let wmContractStatus='done';
 let dragTaskId=null;
 let noticeEditing=false,noticeCollapsed=false;
-let logTargetWorkId=null,logTargetAuthor=null,editingLogId=null;
+let logTargetWorkId=null,editingLogId=null;
 let platformTargetWorkId=null,selectedStatus='serializing',editingPlatformName=null;
 
 // 드롭 닫기 (외부 클릭)
@@ -842,11 +849,11 @@ function setTypeFilter(f){
   document.getElementById('typeDropLabel').textContent=label;
   document.getElementById('typeDropBtn').className='drop-filter-btn'+(f!=='all'?' active-filter':'');
   document.getElementById('typeDrop').classList.add('hidden');
-  // 유형 필터 선택 시 해당 유형 일정이 있는 작품 카드 자동 열기
+  // 유형 필터: 해당 작품 열기 + 해당 없는 작품 닫기
   if(f!=='all'){
     works.forEach(w=>{
       const hasType=tasks.some(t=>t.workId===w.id&&t.type===f);
-      if(hasType)expanded[w.id]=true;
+      expanded[w.id]=hasType;
     });
   }
   render();
@@ -877,9 +884,17 @@ function renderWorks(){
   let filtered=[...works];
   if(contractFilter==='contracted')filtered=filtered.filter(w=>w.contracted);
   if(contractFilter==='not')filtered=filtered.filter(w=>!w.contracted);
-  const sorted=filtered.sort((a,b)=>workUrgency(a.id)-workUrgency(b.id));
+
+  // 유형 필터 활성 시: 해당 작품 상단, 나머지 하단
+  if(currentTypeFilter!=='all'){
+    const hasType=filtered.filter(w=>tasks.some(t=>t.workId===w.id&&t.type===currentTypeFilter));
+    const noType=filtered.filter(w=>!tasks.some(t=>t.workId===w.id&&t.type===currentTypeFilter));
+    filtered=[...hasType.sort((a,b)=>workUrgency(a.id)-workUrgency(b.id)),...noType.sort((a,b)=>workUrgency(a.id)-workUrgency(b.id))];
+  } else {
+    filtered=filtered.sort((a,b)=>workUrgency(a.id)-workUrgency(b.id));
+  }
   let html='';
-  for(const w of sorted){
+  for(const w of filtered){
     const minD=workUrgency(w.id),urgentCount=tasks.filter(t=>t.workId===w.id&&!t.done&&dayDiff(t.date)<=0).length;
     const urgCls=minD<0?'urgent':minD<=3?'warning':'',isOpen=expanded[w.id]===true;
     const contractBadge=w.contracted?`<span class="contract-badge badge-contracted">📋 계약완료</span>`:`<span class="contract-badge badge-not-contracted">⚠️ 미계약</span>`;
@@ -906,21 +921,25 @@ function renderWorks(){
         const diff=dayDiff(t.date),rc=t.done?'done-row':diff<=0?'overdue':diff<=3?'imminent':'';
         th+=`<div class="task-row ${rc}"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}"></span><span class="task-text">${typeLabel[t.type]||t.type}${t.memo?` <span class="task-memo">· ${t.memo}</span>`:''}</span>${t.time?`<span class="task-time">${t.time}</span>`:''}<span style="font-size:11px;color:var(--text3);font-family:'DM Mono',monospace;flex-shrink:0">${t.date}</span><span class="dday ${ddayCls(diff,t.done)}">${ddayLabel(diff)}</span><button class="done-btn ${t.done?'checked':''}" onclick="toggleDone(${t.id})">✓</button><div class="task-actions"><button class="task-act-btn" onclick="openTaskModal('${w.id}',${t.id})">✎</button><button class="task-act-btn del" onclick="deleteTask(${t.id})">✕</button></div></div>`;
       }
-      const wrLogs=logs.filter(l=>l.workId===w.id&&l.author===wr.name).sort((a,b)=>b.date>a.date?1:-1);
-      let logHtml=wrLogs.length?'':'<div class="log-empty">연락 이력이 없어요</div>';
-      wrLogs.forEach(l=>{logHtml+=`<div class="log-item"><span class="log-date">${l.date}</span><span class="log-text">${l.content}</span><div class="log-item-actions"><button class="log-act-btn" onclick="openLogModal('${w.id}','${wr.name}','${l.id}')">✎</button><button class="log-act-btn del" onclick="deleteLog('${l.id}')">✕</button></div></div>`;});
+      const wMemo=w.memo||'';
+      let memoHtml=`<div class="memo-area">
+        <div class="memo-header">
+          <span class="memo-title">📝 작품 메모</span>
+          <button class="memo-edit-btn" onclick="openMemoModal('${w.id}',event)">수정</button>
+        </div>
+        <div class="memo-content">${wMemo?wMemo.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>'}</div>
+      </div>`;
       mHtml+=`<div class="member-row">
         <div class="member-info"><div class="member-name">${wr.name}</div><div class="member-role-badge">${wr.role}작가</div></div>
         <div class="member-tasks-list">${th}</div>
-      </div>
-      <div class="log-area"><div class="log-header"><span class="log-title">📞 연락 이력</span><button class="log-add-btn" onclick="openLogModal('${w.id}','${wr.name}',null)">+ 추가</button></div><div class="log-list">${logHtml}</div></div>`;
+      </div>`;
     }
-    mHtml+=`</div>`;
+    mHtml+=`</div>`+memoHtml;
 
     html+=`<div class="work-card ${urgCls}">
       <div class="work-header" onclick="toggleWork('${w.id}')">
         <div class="work-title-area">
-          <div class="work-name-row"><span class="work-name">${w.title}</span>${contractBadge}</div>
+          <div class="work-name-row"><span class="work-name">&lt;${w.title}&gt;</span>${contractBadge}</div>
           <div class="work-summary">
             <span class="badge ${w.paired?'badge-collab':'badge-solo'}">${w.paired?'글·그림 합작':'단독'}</span>
             ${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}
@@ -1053,12 +1072,12 @@ function renderCalendar(){
   const monthStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}`;
   const allCal=getCalTasks();
   const monthTasks=allCal.filter(t=>t.date.startsWith(monthStr));
-  const deadlineTasks=monthTasks.filter(t=>['deadline','conti'].includes(t.type));
+  const deadlineTasks=monthTasks.filter(t=>t.type==='deadline');
   const doneDeadlines=deadlineTasks.filter(t=>t.done);
   let chipHtml='';
-  deadlineTasks.sort((a,b)=>a.date>b.date?1:-1).forEach(t=>{const w=works.find(w=>w.id===t.workId);const day=parseInt(t.date.slice(8,10));const cls=t.done?'done':t.type==='conti'?'conti':'';chipHtml+=`<span class="cal-deadline-chip ${cls}">${day}일 · ${w?w.title:''} ${typeLabel[t.type]}</span>`;});
+  deadlineTasks.sort((a,b)=>a.date>b.date?1:-1).forEach(t=>{const w=works.find(w=>w.id===t.workId);const day=parseInt(t.date.slice(8,10));const cls=t.done?'done':'';chipHtml+=`<span class="cal-deadline-chip ${cls}">${day}일 · ${w?w.title:''} 원고 마감</span>`;});
   const filterLabel=calSelectedWorkIds.size>0?[...calSelectedWorkIds].map(id=>works.find(w=>w.id===id)?.title).filter(Boolean).join(', '):'전체';
-  document.getElementById('calMonthSummary').innerHTML=`<div class="cal-deadline-card"><div class="cal-deadline-icon">📋</div><div><div class="cal-deadline-label">${filterLabel} · 이달 원고/콘티 마감</div><div class="cal-deadline-value">${deadlineTasks.length}건</div><div class="cal-deadline-sub">완료 ${doneDeadlines.length} · 미처리 ${deadlineTasks.length-doneDeadlines.length}</div></div><div class="cal-deadline-list">${chipHtml||'<span style="font-size:12px;color:var(--text3)">이달 마감 없음</span>'}</div></div>`;
+  document.getElementById('calMonthSummary').innerHTML=`<div class="cal-deadline-card"><div class="cal-deadline-icon">📋</div><div><div class="cal-deadline-label">${filterLabel} · 이달 원고 마감</div><div class="cal-deadline-value">${deadlineTasks.length}건</div><div class="cal-deadline-sub">완료 ${doneDeadlines.length} · 미처리 ${deadlineTasks.length-doneDeadlines.length}</div></div><div class="cal-deadline-list">${chipHtml||'<span style="font-size:12px;color:var(--text3)">이달 원고 마감 없음</span>'}</div></div>`;
 
   const holidays=getHolidays(calYear);
   const firstDay=new Date(calYear,calMonth,1).getDay();
@@ -1153,9 +1172,9 @@ async function testSlack(){if(!slackWebhook){alert('먼저 Webhook URL을 저장
 function toggleWork(id){expanded[id]=!expanded[id];render();}
 function toggleDone(id){const t=tasks.find(t=>t.id===id);if(t){t.done=!t.done;saveData();render();showToast(t.done?'완료 처리했어요':'완료 취소했어요');}}
 function deleteTask(id){if(!confirm('이 일정을 삭제할까요?'))return;tasks=tasks.filter(t=>t.id!==id);saveData();render();showToast('일정을 삭제했어요');}
-function deleteWork(id,e){e.stopPropagation();if(!confirm('이 작품과 모든 일정을 삭제할까요?'))return;works=works.filter(w=>w.id!==id);tasks=tasks.filter(t=>t.workId!==id);logs=logs.filter(l=>l.workId!==id);saveData();render();showToast('작품을 삭제했어요');}
+function deleteWork(id,e){e.stopPropagation();if(!confirm('이 작품과 모든 일정을 삭제할까요?'))return;works=works.filter(w=>w.id!==id);tasks=tasks.filter(t=>t.workId!==id);saveData();render();showToast('작품을 삭제했어요');}
 function removePlatform(wId,name,e){e.stopPropagation();const w=works.find(w=>w.id===wId);if(w){w.platforms=w.platforms.filter(p=>p.name!==name);saveData();render();showToast('플랫폼을 삭제했어요');}}
-function deleteLog(lid){logs=logs.filter(l=>l.id!==lid);saveData();render();showToast('이력을 삭제했어요');}
+
 
 function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
@@ -1187,8 +1206,13 @@ function saveWork(){
   if(!title||!writer||(paired&&!artist)){alert('필수 항목을 입력해 주세요.');return;}
   const contracted=wmContractStatus==='done';
   if(editingWorkId){const w=works.find(w=>w.id===editingWorkId);w.title=title;w.paired=paired;w.contracted=contracted;w.writers=paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}];}
-  else{const id='w'+Date.now();works.push({id,title,paired,contracted,writers:paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}],platforms:[]});expanded[id]=false;}
+  else{const id='w'+Date.now();works.push({id,title,paired,contracted,writers:paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}],platforms:[],memo:''});expanded[id]=false;}
   saveData();closeModal('workModal');render();showToast(editingWorkId?'작품을 수정했어요':'작품을 추가했어요');
+}
+
+function toggleRepeatEnd(){
+  const v=document.getElementById('tm-repeat').value;
+  document.getElementById('tm-repeat-end-group').style.display=v==='none'?'none':'block';
 }
 
 // 일정 모달
@@ -1197,12 +1221,12 @@ function openTaskModal(wId,taskId){
   editingTaskId=taskId!=null?taskId:null;
   const t=taskId!=null?tasks.find(t=>t.id===taskId):null;
   document.getElementById('taskModalTitle').textContent=t?'일정 수정':'일정 추가';
-  const opts=works.map(w=>`<option value="${w.id}" ${(wId===w.id||t?.workId===w.id)?'selected':''}>${w.title}</option>`).join('');
+  const opts=works.map(w=>`<option value="${w.id}" ${(wId===w.id||t?.workId===w.id)?'selected':''}>&lt;${w.title}&gt;</option>`).join('');
   document.getElementById('tm-work').innerHTML=opts;
   if(t)document.getElementById('tm-work').value=t.workId;
   updateTmAuthors();
-  if(t){document.getElementById('tm-author').value=t.author;document.getElementById('tm-type').value=t.type;document.getElementById('tm-date').value=t.date;document.getElementById('tm-time').value=t.time||'';document.getElementById('tm-memo').value=t.memo||'';}
-  else{document.getElementById('tm-date').value=todayStr();document.getElementById('tm-time').value='';document.getElementById('tm-memo').value='';}
+  if(t){document.getElementById('tm-author').value=t.author;document.getElementById('tm-type').value=t.type;document.getElementById('tm-date').value=t.date;document.getElementById('tm-time').value=t.time||'';document.getElementById('tm-memo').value=t.memo||'';document.getElementById('tm-repeat').value='none';document.getElementById('tm-repeat-end-group').style.display='none';}
+  else{document.getElementById('tm-date').value=todayStr();document.getElementById('tm-time').value='';document.getElementById('tm-memo').value='';document.getElementById('tm-repeat').value='none';document.getElementById('tm-repeat-end-group').style.display='none';}
   openModal('taskModal');
 }
 function updateTmAuthors(){const wId=document.getElementById('tm-work').value,w=works.find(w=>w.id===wId);if(!w)return;document.getElementById('tm-author').innerHTML=w.writers.map(wr=>`<option value="${wr.name}">${wr.name} (${wr.role})</option>`).join('');}
@@ -1210,29 +1234,53 @@ function saveTask(){
   const workId=document.getElementById('tm-work').value,author=document.getElementById('tm-author').value;
   const type=document.getElementById('tm-type').value,date=document.getElementById('tm-date').value;
   const time=document.getElementById('tm-time').value,memo=document.getElementById('tm-memo').value.trim();
+  const repeat=document.getElementById('tm-repeat').value;
+  const repeatEnd=document.getElementById('tm-repeat-end').value;
   if(!workId||!author||!date){alert('필수 항목을 입력해 주세요.');return;}
-  if(editingTaskId!=null){const t=tasks.find(t=>t.id===editingTaskId);if(t){t.workId=workId;t.author=author;t.type=type;t.date=date;t.time=time;t.memo=memo;}showToast('일정을 수정했어요');}
-  else{tasks.push({id:nextId++,workId,author,type,date,time,memo,done:false});showToast('일정을 추가했어요');}
+
+  if(editingTaskId!=null){
+    const t=tasks.find(t=>t.id===editingTaskId);
+    if(t){t.workId=workId;t.author=author;t.type=type;t.date=date;t.time=time;t.memo=memo;}
+    showToast('일정을 수정했어요');
+  } else {
+    // 반복 없음
+    if(repeat==='none'||!repeatEnd){
+      tasks.push({id:nextId++,workId,author,type,date,time,memo,done:false});
+      showToast('일정을 추가했어요');
+    } else {
+      // 반복 일정 생성
+      const intervalDays=repeat==='weekly'?7:repeat==='biweekly'?14:null;
+      const isMonthly=repeat==='monthly';
+      let cur=new Date(date);
+      const end=new Date(repeatEnd);
+      let count=0;
+      while(cur<=end&&count<52){
+        const ds=cur.toISOString().slice(0,10);
+        tasks.push({id:nextId++,workId,author,type,date:ds,time,memo,done:false});
+        if(isMonthly){cur=new Date(cur);cur.setMonth(cur.getMonth()+1);}
+        else{cur=new Date(cur);cur.setDate(cur.getDate()+intervalDays);}
+        count++;
+      }
+      showToast(`반복 일정 ${count}건을 추가했어요`);
+    }
+  }
   saveData();closeModal('taskModal');render();
 }
 
-// 연락 이력 모달
-function openLogModal(wId,author,logId){
-  logTargetWorkId=wId;logTargetAuthor=author;editingLogId=logId||null;
-  const existingLog=logId?logs.find(l=>l.id===logId):null;
-  document.getElementById('logModalTitle').textContent=existingLog?'연락 이력 수정':'연락 이력 추가';
+// 작품 메모 모달
+let memoTargetWorkId=null;
+function openMemoModal(wId,e){
+  if(e)e.stopPropagation();
+  memoTargetWorkId=wId;
   const w=works.find(w=>w.id===wId);
-  document.getElementById('lm-author').innerHTML=w?w.writers.map(wr=>`<option value="${wr.name}" ${wr.name===author?'selected':''}>${wr.name}</option>`).join(''):'';
-  document.getElementById('lm-date').value=existingLog?existingLog.date:todayStr();
-  document.getElementById('lm-content').value=existingLog?existingLog.content:'';
-  openModal('logModal');
+  document.getElementById('memoModalTitle').textContent=`<${w?w.title:''}> 메모`;
+  document.getElementById('mm-content').value=w?w.memo||'':'';
+  openModal('memoModal');
 }
-function saveLog(){
-  const author=document.getElementById('lm-author').value,date=document.getElementById('lm-date').value,content=document.getElementById('lm-content').value.trim();
-  if(!content||!date){alert('날짜와 내용을 입력해 주세요.');return;}
-  if(editingLogId){const l=logs.find(l=>l.id===editingLogId);if(l){l.author=author;l.date=date;l.content=content;}showToast('이력을 수정했어요');}
-  else{logs.push({id:'log'+Date.now(),workId:logTargetWorkId,author,date,content});showToast('연락 이력을 추가했어요');}
-  saveData();closeModal('logModal');render();
+function saveMemo(){
+  const w=works.find(w=>w.id===memoTargetWorkId);
+  if(w){w.memo=document.getElementById('mm-content').value.trim();}
+  saveData();closeModal('memoModal');render();showToast('메모를 저장했어요');
 }
 
 // 플랫폼 모달

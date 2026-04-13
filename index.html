@@ -639,7 +639,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <div class="status-opt active-s" id="sopt-serializing" onclick="selectStatus('serializing')">연재 중</div>
         <div class="status-opt" id="sopt-hiatus" onclick="selectStatus('hiatus')">휴재</div>
         <div class="status-opt" id="sopt-completed" onclick="selectStatus('completed')">완결</div>
-        <div class="status-opt" id="sopt-planned" onclick="selectStatus('planned')">연재 예정</div>
         <div class="status-opt" id="sopt-production" onclick="selectStatus('production')">제작 중</div>
       </div>
     </div>
@@ -660,12 +659,8 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <label class="form-label">정기 휴재 패턴</label>
       <select class="form-select" id="pm-hiatus-pattern" onchange="toggleHiatusBase()">
         <option value="none">없음 (매주 연재)</option>
-        <option value="biweekly-odd">격주 휴재 (홀수 주 연재)</option>
-        <option value="biweekly-even">격주 휴재 (짝수 주 연재)</option>
         <option value="4-1">4주 연재 후 1주 휴재</option>
         <option value="5-1">5주 연재 후 1주 휴재</option>
-        <option value="month-first">매월 첫째 주 휴재</option>
-        <option value="month-last">매월 마지막 주 휴재</option>
       </select>
     </div>
     <div class="form-group" id="pm-hiatus-base-group" style="display:none">
@@ -945,12 +940,14 @@ function renderWorks(){
       </div>`;
     }
     const wMemo=w.memo||'';
+    const memoRaw=wMemo.replace(/^\[\d{4}-\d{2}-\d{2}\]\n?/,'');
     const memoHtml=`<div class="memo-area">
       <div class="memo-header">
         <span class="memo-title">📝 작품 메모</span>
-        <button class="memo-edit-btn" onclick="openMemoModal('${w.id}',event)">수정</button>
+        <span style="font-size:11px;color:var(--text3)">클릭해서 수정</span>
       </div>
-      <div class="memo-content">${wMemo?wMemo.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>'}</div>
+      <div class="memo-content" id="memo-view-${w.id}" onclick="startInlineMemo('${w.id}')" style="cursor:text;min-height:32px">${wMemo?memoRaw.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>'}</div>
+      <textarea class="memo-inline-input" id="memo-input-${w.id}" style="display:none;width:100%;font-size:12px;color:var(--text2);line-height:1.7;border:1px solid var(--accent);border-radius:var(--radius);padding:6px 8px;font-family:inherit;resize:vertical;min-height:60px;outline:none;background:var(--surface)" onblur="saveInlineMemo('${w.id}')" onkeydown="if(event.key==='Escape')cancelInlineMemo('${w.id}')">${memoRaw}</textarea>
     </div>`;
     mHtml+=`</div>`+memoHtml;
 
@@ -1231,7 +1228,12 @@ function openCalPopup(dateStr,event){
   dayTasks.forEach(t=>{
     const w=works.find(w=>w.id===t.workId);
     const evStyle=(typeEvStyle[t.type]||typeEvStyle.etc)+(t.done?";opacity:0.45":"");
-    html+=`<div class="cal-popup-event" style="${evStyle};border-radius:6px;padding:5px 8px;margin-bottom:4px;display:flex;align-items:center;gap:6px"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span><span style="font-size:12px">${w?w.title+' · ':''} ${typeLabel[t.type]||t.type}${t.memo?' · '+t.memo:''}</span></div>`;
+    html+=`<div class="cal-popup-event" style="${evStyle};border-radius:6px;padding:5px 8px;margin-bottom:4px;display:flex;align-items:center;gap:6px">
+      <span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="width:7px;height:7px;border-radius:50%;flex-shrink:0"></span>
+      <span style="font-size:12px;flex:1">${w?w.title+' · ':''} ${typeLabel[t.type]||t.type}${t.memo?' · '+t.memo:''}</span>
+      <button onclick="toggleDone(${t.id});renderCalendar();closeCalPopup()" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid var(--border2);background:${t.done?'var(--accent)':'transparent'};color:${t.done?'#fff':'var(--text3)'};cursor:pointer;font-family:inherit">${t.done?'완료':'완료'}</button>
+      <button onclick="if(confirm('삭제할까요?')){deleteTask(${t.id});renderCalendar();closeCalPopup();}" style="font-size:10px;padding:1px 6px;border-radius:4px;border:1px solid #F0C0BC;background:var(--red-light);color:var(--red);cursor:pointer;font-family:inherit">삭제</button>
+    </div>`;
   });
   document.getElementById('calPopupList').innerHTML=html;
   const rect=event.target.getBoundingClientRect();
@@ -1346,7 +1348,41 @@ function saveTask(){
   if(document.getElementById('page-calendar').style.display!=='none')renderCalendar();
 }
 
-// 작품 메모 모달
+// 작품 메모 인라인 편집
+function startInlineMemo(wId){
+  const view=document.getElementById('memo-view-'+wId);
+  const input=document.getElementById('memo-input-'+wId);
+  if(!view||!input)return;
+  view.style.display='none';
+  input.style.display='block';
+  input.focus();
+  input.selectionStart=input.value.length;
+}
+function saveInlineMemo(wId){
+  const view=document.getElementById('memo-view-'+wId);
+  const input=document.getElementById('memo-input-'+wId);
+  if(!view||!input)return;
+  const w=works.find(w=>w.id===wId);
+  if(w){
+    const content=input.value.trim();
+    w.memo=content?`[${todayStr()}]\n${content}`:'';
+  }
+  saveData();
+  // 뷰 업데이트
+  const memoRaw=(w?.memo||'').replace(/^\[\d{4}-\d{2}-\d{2}\]\n?/,'');
+  view.innerHTML=memoRaw?memoRaw.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>';
+  input.style.display='none';
+  view.style.display='block';
+}
+function cancelInlineMemo(wId){
+  const view=document.getElementById('memo-view-'+wId);
+  const input=document.getElementById('memo-input-'+wId);
+  if(!view||!input)return;
+  input.style.display='none';
+  view.style.display='block';
+}
+
+// 작품 메모 모달 (수정 버튼용 — 인라인으로 대체했으나 함수 유지)
 let memoTargetWorkId=null;
 function openMemoModal(wId,e){
   if(e)e.stopPropagation();
@@ -1391,7 +1427,7 @@ function openPlatformModal(wId,platformName,e){
     document.getElementById('pm-link').value='';
     selectedStatus='serializing';
   }
-  ['serializing','hiatus','completed','planned','production'].forEach(s=>{
+  ['serializing','hiatus','completed','production'].forEach(s=>{
     const el=document.getElementById('sopt-'+s);
     if(!el)return;
     el.className='status-opt'+(s===selectedStatus?(s==='serializing'?' active-s':s==='completed'?' active-n':' active-p'):'');
@@ -1415,7 +1451,7 @@ function toggleCustomPlatform(){document.getElementById('pm-custom-group').style
 function selectStatus(s){
   selectedStatus=s;
   const isActive=s==='serializing';
-  ['serializing','hiatus','completed','planned','production'].forEach(st=>{
+  ['serializing','hiatus','completed','production'].forEach(st=>{
     const el=document.getElementById('sopt-'+st);
     if(!el)return;
     el.className='status-opt'+(s===st?(st==='serializing'?' active-s':st==='completed'?' active-n':' active-p'):'');

@@ -1160,14 +1160,19 @@ function renderCalendar(){
   works.forEach(w=>{
     if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
     w.platforms.forEach(p=>{
-      if(p.status!=='serializing')return; // 휴재/완결/제작중은 표시 안함
+      // 연재 중이거나 휴재 중인 플랫폼 모두 처리
+      if(p.status!=='serializing'&&p.status!=='hiatus')return;
       if(!p.uploadDays||p.uploadDays.length===0)return;
+      const hiatusStart=p.hiatusStart?new Date(p.hiatusStart):null;
+      const hiatusEnd=p.hiatusEnd?new Date(p.hiatusEnd):null;
       p.uploadDays.forEach(dow=>{
         for(let d=1;d<=lastDate;d++){
           const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           if(new Date(dateStr).getDay()!==dow)continue;
-          // 휴재 패턴 체크
           if(isHiatusDate(dateStr,p))continue;
+          const cur=new Date(dateStr);
+          // 휴재 기간 내 날짜는 uploadDayMap에 넣지 않음 (hiatusPeriodMap에서 처리)
+          if(hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd))continue;
           if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
           uploadDayMap[dateStr].push({work:w.title,platform:p.name});
         }

@@ -459,7 +459,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         <!-- 유형 드롭다운 -->
         <div class="drop-filter" id="typeDropWrap">
           <button class="drop-filter-btn" id="typeDropBtn" onclick="toggleDrop('typeDrop')">
-            <span id="typeDropLabel">유형</span> ▾
+            <span id="typeDropLabel">업무 유형</span> ▾
           </button>
           <div class="drop-menu hidden" id="typeDrop">
             <div class="drop-menu-item" onclick="setTypeFilter('all')"><div class="drop-check" id="tc-all">✓</div>전체</div>
@@ -861,7 +861,7 @@ function setTypeFilter(f){
   currentTypeFilter=f;
   document.querySelectorAll('[id^=tc-]').forEach(el=>el.textContent='');
   document.getElementById('tc-'+(f==='all'?'all':f)).textContent='✓';
-  const label=f==='all'?'유형':typeLabel[f]||f;
+  const label=f==='all'?'업무 유형':typeLabel[f]||f;
   document.getElementById('typeDropLabel').textContent=label;
   document.getElementById('typeDropBtn').className='drop-filter-btn'+(f!=='all'?' active-filter':'');
   document.getElementById('typeDrop').classList.add('hidden');

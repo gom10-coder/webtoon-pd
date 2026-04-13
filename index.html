@@ -255,8 +255,9 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .calendar-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;user-select:none}
 .cal-day-header{text-align:center;font-size:11px;font-weight:700;color:var(--text3);padding:6px 0;letter-spacing:0.04em}
 .cal-day-header:first-child{color:var(--red)}.cal-day-header:last-child{color:var(--blue)}
-.cal-cell{min-height:90px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;position:relative}
-.cal-cell.other-month{background:var(--surface2);opacity:0.45}
+.cal-cell{min-height:90px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:5px;position:relative;cursor:pointer}
+.cal-cell:hover{background:#F5FAF7}
+.cal-cell.other-month{background:var(--surface2);opacity:0.45;cursor:default}
 .cal-cell.today{border-color:var(--accent);border-width:2px}
 .cal-cell.holiday{background:#FFF5F5}
 .cal-cell.drag-over{background:#EAF2EC;border-color:var(--accent);border-style:dashed}
@@ -401,7 +402,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">◈</span> 대시보드</button>
       <button class="nav-item" onclick="showPage('platform',this)"><span class="nav-icon">◉</span> 연재 현황</button>
       <button class="nav-item" onclick="showPage('calendar',this)"><span class="nav-icon">◑</span> 마감 달력</button>
-      <button class="nav-item" onclick="showPage('stats',this)"><span class="nav-icon">◐</span> 월별 통계</button>
       <button class="nav-item" onclick="showPage('slack',this)"><span class="nav-icon">◇</span> 슬랙 알림</button>
     </nav>
     <div class="sidebar-footer">
@@ -522,22 +522,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
       <div class="cal-month-summary" id="calMonthSummary"></div>
       <div class="calendar-grid" id="calGrid"></div>
-      <div class="cal-list-section">
-        <div class="cal-list-title" id="calListTitle"></div>
-        <div id="calList"></div>
-      </div>
-    </div>
-
-    <!-- 월별 통계 -->
-    <div id="page-stats" style="display:none">
-      <div class="page-header"><div><div class="page-title">월별 통계</div><div class="page-subtitle">마감 현황 리포트</div></div></div>
-      <div class="stat-month-select">
-        <button class="stat-month-btn" onclick="statMove(-1)">◀</button>
-        <div class="stat-month-label" id="statMonthLabel"></div>
-        <button class="stat-month-btn" onclick="statMove(1)">▶</button>
-        <button class="stat-month-btn" onclick="statGoToday()">이번 달</button>
-      </div>
-      <div class="stats-grid" id="statsGrid"></div>
     </div>
 
     <!-- 슬랙 알림 -->
@@ -1208,7 +1192,7 @@ function renderCalendar(){
       const remaining=dayTasks.length-shown;
       evHtml+=`<div class="cal-more" onclick="openCalPopup('${dateStr}',event)">+${remaining}건 더보기</div>`;
     }
-    html+=`<div class="cal-cell ${isToday?'today':''} ${holidayName?'holiday':''}" data-date="${dateStr}">${holidayName?`<div class="cal-holiday-name">${holidayName}</div>`:''}<div class="cal-date" style="${dateColor}">${d}</div>${evHtml}</div>`;
+    html+=`<div class="cal-cell ${isToday?'today':''} ${holidayName?'holiday':''}" data-date="${dateStr}" onclick="calCellClick('${dateStr}',event)">${holidayName?`<div class="cal-holiday-name">${holidayName}</div>`:''}<div class="cal-date" style="${dateColor}">${d}</div>${evHtml}</div>`;
   }
   const remain=(7-((firstDay+lastDate)%7))%7;
   for(let i=1;i<=remain;i++){html+=`<div class="cal-cell other-month"><div class="cal-date">${i}</div></div>`;}
@@ -1224,16 +1208,12 @@ function renderCalendar(){
     cell.addEventListener('dragleave',()=>cell.classList.remove('drag-over'));
     cell.addEventListener('drop',e=>{e.preventDefault();cell.classList.remove('drag-over');if(dragTaskId==null)return;const newDate=cell.dataset.date;const t=tasks.find(t=>t.id===dragTaskId);if(t&&t.date!==newDate){t.date=newDate;saveData();renderCalendar();showToast(`일정을 ${newDate}로 이동했어요`);}dragTaskId=null;});
   });
+}
 
-  // 이달 리스트
-  document.getElementById('calListTitle').textContent=`${filterLabel} · ${calYear}년 ${months[calMonth]} 전체 일정 목록`;
-  if(!monthTasks.length){document.getElementById('calList').innerHTML=`<div class="cal-empty-month">이달 등록된 일정이 없어요</div>`;return;}
-  let listHtml='';
-  monthTasks.sort((a,b)=>a.date>b.date?1:a.date<b.date?-1:0).forEach(t=>{
-    const w=works.find(w=>w.id===t.workId),diff=dayDiff(t.date);
-    listHtml+=`<div class="cal-list-row ${t.done?'done':''}"><span class="cal-list-date">${t.date}${t.time?' '+t.time:''}</span><span class="cal-list-work">${w?w.title:'?'}</span><span class="cal-list-author">${t.author}</span><span class="cal-list-type"><span class="type-dot ${typeDotCls[t.type]||'td-etc'}" style="display:inline-block;margin-right:5px;vertical-align:middle"></span>${typeLabel[t.type]||t.type}${t.memo?` <span class="cal-list-memo">· ${t.memo}</span>`:''}</span><span class="cal-list-dday ${ddayCls(diff,t.done)}">${t.done?'완료':ddayLabel(diff)}</span></div>`;
-  });
-  document.getElementById('calList').innerHTML=listHtml;
+function calCellClick(dateStr,e){
+  // 이벤트나 더보기 버튼 클릭 시 무시
+  if(e.target.closest('.cal-event')||e.target.closest('.cal-more')||e.target.closest('.cal-popup'))return;
+  openTaskModal(null,null,dateStr);
 }
 
 function removeCalWork(wId){
@@ -1315,7 +1295,7 @@ function toggleRepeatEnd(){
 
 // 일정 모달
 let editingTaskId=null;
-function openTaskModal(wId,taskId){
+function openTaskModal(wId,taskId,preDate){
   editingTaskId=taskId!=null?taskId:null;
   const t=taskId!=null?tasks.find(t=>t.id===taskId):null;
   document.getElementById('taskModalTitle').textContent=t?'일정 수정':'일정 추가';
@@ -1324,7 +1304,7 @@ function openTaskModal(wId,taskId){
   if(t)document.getElementById('tm-work').value=t.workId;
   updateTmAuthors();
   if(t){document.getElementById('tm-author').value=t.author;document.getElementById('tm-type').value=t.type;document.getElementById('tm-date').value=t.date;document.getElementById('tm-time').value=t.time||'';document.getElementById('tm-memo').value=t.memo||'';document.getElementById('tm-repeat').value='none';document.getElementById('tm-repeat-end-group').style.display='none';}
-  else{document.getElementById('tm-date').value=todayStr();document.getElementById('tm-time').value='';document.getElementById('tm-memo').value='';document.getElementById('tm-repeat').value='none';document.getElementById('tm-repeat-end-group').style.display='none';}
+  else{document.getElementById('tm-date').value=preDate||todayStr();document.getElementById('tm-time').value='';document.getElementById('tm-memo').value='';document.getElementById('tm-repeat').value='none';document.getElementById('tm-repeat-end-group').style.display='none';}
   openModal('taskModal');
 }
 function updateTmAuthors(){const wId=document.getElementById('tm-work').value,w=works.find(w=>w.id===wId);if(!w)return;document.getElementById('tm-author').innerHTML=w.writers.map(wr=>`<option value="${wr.name}">${wr.name} (${wr.role})</option>`).join('');}
@@ -1363,6 +1343,7 @@ function saveTask(){
     }
   }
   saveData();closeModal('taskModal');render();
+  if(document.getElementById('page-calendar').style.display!=='none')renderCalendar();
 }
 
 // 작품 메모 모달

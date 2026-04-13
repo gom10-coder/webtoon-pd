@@ -1180,15 +1180,14 @@ function renderCalendar(){
 
           // 정기 휴재 패턴 체크 (연재 중일 때만, 휴재 기간 밖일 때만)
           const inHiatusPeriod=hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd);
-          if(p.status==='serializing'&&!inHiatusPeriod&&isHiatusDate(dateStr,p)){
+          if((p.status==='serializing'||p.status==='hiatus')&&!inHiatusPeriod&&isHiatusDate(dateStr,p)){
             if(!hiatusMap[dateStr])hiatusMap[dateStr]=[];
             hiatusMap[dateStr].push({work:w.title,platform:p.name});
             continue;
           }
 
-          // 휴재 기간 체크
+          // 휴재 기간 체크 (상태 무관 — 연재 중이어도 휴재 기간이면 휴재 표시)
           if(inHiatusPeriod){
-            // 이 날짜는 연재 요일인데 휴재 기간 → 휴재 표시
             if(!hiatusPeriodMap[dateStr])hiatusPeriodMap[dateStr]=[];
             hiatusPeriodMap[dateStr].push({work:w.title,platform:p.name});
             continue;
@@ -1197,7 +1196,7 @@ function renderCalendar(){
           // 완결/제작중은 업로드일 표시 안함
           if(p.status==='completed'||p.status==='production')continue;
 
-          // 나머지(연재 중이거나 휴재지만 휴재 시작 전)는 업로드일 표시
+          // 휴재 상태지만 휴재 기간 이전/이후 → 업로드일 표시
           if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
           uploadDayMap[dateStr].push({work:w.title,platform:p.name});
         }

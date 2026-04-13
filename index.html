@@ -1051,10 +1051,20 @@ function isHiatusDate(dateStr,p){
     return date.getDate()===lastOccurrence;
   }
   if((pat==='4-1'||pat==='5-1')&&p.hiatusBase){
-    const base=new Date(p.hiatusBase);
-    const cycleLen=pat==='4-1'?5:6; // 연재+휴재 합산 주 수
-    const restWeek=pat==='4-1'?4:5; // 몇 번째 주가 휴재인지 (0-indexed)
+    const cycleLen=pat==='4-1'?5:6;
+    const restWeek=pat==='4-1'?4:5;
+    // 휴재 기간이 끝났으면 그 다음 날을 새 기준점으로
+    let base=new Date(p.hiatusBase);
+    if(p.hiatusEnd){
+      const hiatusEndDate=new Date(p.hiatusEnd);
+      if(base<=hiatusEndDate){
+        // 휴재 종료 다음날을 기준점으로 리셋
+        base=new Date(hiatusEndDate);
+        base.setDate(base.getDate()+1);
+      }
+    }
     const diffMs=date-base;
+    if(diffMs<0)return false; // 기준점 이전은 패턴 미적용
     const diffDays=Math.floor(diffMs/86400000);
     const diffWeeks=Math.floor(diffDays/7);
     return (diffWeeks%cycleLen)===restWeek;

@@ -1208,6 +1208,9 @@ function renderCalendar(){
     });
   });
   for(let d=1;d<=lastDate;d++){
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const isToday=dateStr===todStr;
+    const holidayName=holidays[dateStr];
     const dayTasks=allCal.filter(t=>t.date===dateStr);
     window._calDayTasks[dateStr]=dayTasks;
     const dow=new Date(dateStr).getDay();

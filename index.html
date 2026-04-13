@@ -655,6 +655,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div class="form-hint">선택한 요일이 달력에 업로드일로 자동 표시돼요</div>
     </div>
+    <div class="form-group" id="pm-hiatus-period-group" style="display:none">
+      <label class="form-label">휴재 기간</label>
+      <div class="form-row">
+        <div><label class="form-label" style="font-weight:400;font-size:11px">시작일</label><input class="form-input" id="pm-hiatus-start" type="date"/></div>
+        <div><label class="form-label" style="font-weight:400;font-size:11px">종료일 (선택 없음 = 무기한)</label><input class="form-input" id="pm-hiatus-end" type="date"/></div>
+      </div>
+      <div class="form-hint">종료일을 비워두면 재개할 때까지 휴재 상태가 유지돼요</div>
+    </div>
     <div class="form-group" id="pm-hiatus-pattern-group" style="display:none">
       <label class="form-label">정기 휴재 패턴</label>
       <select class="form-select" id="pm-hiatus-pattern" onchange="toggleHiatusBase()">
@@ -788,6 +796,11 @@ function showPage(name,el){
 }
 
 function render(){
+  // D-day(당일) 일정 있는 작품 자동 열기
+  works.forEach(w=>{
+    const hasDday=tasks.some(t=>t.workId===w.id&&!t.done&&dayDiff(t.date)===0);
+    if(hasDday)expanded[w.id]=true;
+  });
   renderNotice();renderTodo();renderContractToggle();renderWorks();
   const ts=todayStr(),d=new Date(ts),days=['일','월','화','수','목','금','토'];
   document.getElementById('todayDisplay').textContent=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${days[d.getDay()]})`;
@@ -1161,10 +1174,40 @@ function renderCalendar(){
       });
     });
   });
+  // 정기 휴재 맵
+  const hiatusMap={};
+  const hiatusPeriodMap={};
+  works.forEach(w=>{
+    if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
+    w.platforms.forEach(p=>{
+      if(p.status==='serializing'&&p.uploadDays&&p.uploadDays.length>0&&p.hiatusPattern&&p.hiatusPattern!=='none'){
+        p.uploadDays.forEach(dow=>{
+          for(let d=1;d<=lastDate;d++){
+            const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+            if(new Date(dateStr).getDay()!==dow)continue;
+            if(isHiatusDate(dateStr,p)){
+              if(!hiatusMap[dateStr])hiatusMap[dateStr]=[];
+              hiatusMap[dateStr].push({work:w.title,platform:p.name});
+            }
+          }
+        });
+      }
+      if(p.status==='hiatus'&&p.hiatusStart){
+        const start=new Date(p.hiatusStart);
+        const end=p.hiatusEnd?new Date(p.hiatusEnd):null;
+        for(let d=1;d<=lastDate;d++){
+          const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+          const cur=new Date(dateStr);
+          if(cur>=start&&(!end||cur<=end)){
+            if(p.uploadDays&&p.uploadDays.length>0&&!p.uploadDays.includes(cur.getDay()))continue;
+            if(!hiatusPeriodMap[dateStr])hiatusPeriodMap[dateStr]=[];
+            hiatusPeriodMap[dateStr].push({work:w.title,platform:p.name});
+          }
+        }
+      }
+    });
+  });
   for(let d=1;d<=lastDate;d++){
-    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-    const isToday=dateStr===todStr;
-    const holidayName=holidays[dateStr];
     const dayTasks=allCal.filter(t=>t.date===dateStr);
     window._calDayTasks[dateStr]=dayTasks;
     const dow=new Date(dateStr).getDay();
@@ -1176,6 +1219,18 @@ function renderCalendar(){
     if(uploadDayMap[dateStr]){
       uploadDayMap[dateStr].forEach(u=>{
         evHtml+=`<div style="background:#E6F0FF;color:#18107A;border-left:3px solid #4060D0;border-radius:3px;font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5" title="${u.work} · ${u.platform} 업로드일">📤 ${u.work}</div>`;
+      });
+    }
+    // 정기 휴재 표시
+    if(hiatusMap[dateStr]){
+      hiatusMap[dateStr].forEach(h=>{
+        evHtml+=`<div style="background:#FDF3E7;color:#7A5000;border-left:3px solid #D0A000;border-radius:3px;font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5" title="${h.work} · ${h.platform} 정기 휴재">🔁 ${h.work} 정기휴재</div>`;
+      });
+    }
+    // 휴재 기간 표시
+    if(hiatusPeriodMap[dateStr]){
+      hiatusPeriodMap[dateStr].forEach(h=>{
+        evHtml+=`<div style="background:#F5F0E8;color:#6A5A40;border-left:3px solid #B0A080;border-radius:3px;font-size:10px;padding:2px 5px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;line-height:1.5" title="${h.work} · ${h.platform} 휴재 중">⏸ ${h.work} 휴재</div>`;
       });
     }
     dayTasks.slice(0,Math.max(0,3-( uploadDayMap[dateStr]?.length||0))).forEach(t=>{
@@ -1208,9 +1263,13 @@ function renderCalendar(){
 }
 
 function calCellClick(dateStr,e){
-  // 이벤트나 더보기 버튼 클릭 시 무시
   if(e.target.closest('.cal-event')||e.target.closest('.cal-more')||e.target.closest('.cal-popup'))return;
-  openTaskModal(null,null,dateStr);
+  const dayTasks=window._calDayTasks[dateStr]||[];
+  if(dayTasks.length>0){
+    openCalPopup(dateStr,e);
+  } else {
+    openTaskModal(null,null,dateStr);
+  }
 }
 
 function removeCalWork(wId){
@@ -1224,7 +1283,7 @@ function openCalPopup(dateStr,event){
   const popup=document.getElementById('calPopup'),overlay=document.getElementById('calPopupOverlay');
   document.getElementById('calPopupDate').textContent=dateStr;
   const dayTasks=window._calDayTasks[dateStr]||[];
-  let html='';
+  let html=`<button onclick="closeCalPopup();openTaskModal(null,null,'${dateStr}')" style="width:100%;font-size:12px;padding:6px;border-radius:6px;border:1px dashed var(--border2);background:none;color:var(--accent);cursor:pointer;font-family:inherit;margin-bottom:8px">+ 이 날 일정 추가</button>`;
   dayTasks.forEach(t=>{
     const w=works.find(w=>w.id===t.workId);
     const evStyle=(typeEvStyle[t.type]||typeEvStyle.etc)+(t.done?";opacity:0.45":"");
@@ -1436,7 +1495,9 @@ function openPlatformModal(wId,platformName,e){
   document.getElementById('pm-ep-group').style.display=isActive?'':'none';
   document.getElementById('pm-days-group').style.display=isActive?'':'none';
   document.getElementById('pm-hiatus-pattern-group').style.display=isActive?'':'none';
-  // 정기 휴재 패턴 복원
+  document.getElementById('pm-hiatus-period-group').style.display=(selectedStatus==='hiatus')?'':'none';
+  document.getElementById('pm-hiatus-start').value=existingP?.hiatusStart||'';
+  document.getElementById('pm-hiatus-end').value=existingP?.hiatusEnd||'';
   const pat=existingP?.hiatusPattern||'none';
   document.getElementById('pm-hiatus-pattern').value=pat;
   document.getElementById('pm-hiatus-base').value=existingP?.hiatusBase||'';
@@ -1459,6 +1520,7 @@ function selectStatus(s){
   document.getElementById('pm-ep-group').style.display=isActive?'':'none';
   document.getElementById('pm-days-group').style.display=isActive?'':'none';
   document.getElementById('pm-hiatus-pattern-group').style.display=isActive?'':'none';
+  document.getElementById('pm-hiatus-period-group').style.display=(s==='hiatus')?'':'none';
   const patternVal=document.getElementById('pm-hiatus-pattern')?.value||'none';
   document.getElementById('pm-hiatus-base-group').style.display=(isActive&&patternVal!=='none'&&!patternVal.startsWith('month'))?'':'none';
 }
@@ -1474,16 +1536,18 @@ function savePlatform(){
   const uploadDays=isActive?[...document.querySelectorAll('.pm-day-cb:checked')].map(cb=>parseInt(cb.value)):[];
   const hiatusPattern=isActive?(document.getElementById('pm-hiatus-pattern').value||'none'):'none';
   const hiatusBase=document.getElementById('pm-hiatus-base').value||'';
+  const hiatusStart=document.getElementById('pm-hiatus-start').value||'';
+  const hiatusEnd=document.getElementById('pm-hiatus-end').value||'';
   if(editingPlatformName){
     const p=w.platforms.find(p=>p.name===editingPlatformName);
-    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;p.hiatusPattern=hiatusPattern;p.hiatusBase=hiatusBase;}
+    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;p.hiatusPattern=hiatusPattern;p.hiatusBase=hiatusBase;p.hiatusStart=hiatusStart;p.hiatusEnd=hiatusEnd;}
     saveData();closeModal('platformModal');render();showToast('플랫폼을 수정했어요');
   } else {
     let name=document.getElementById('pm-name').value;
     if(name==='__custom')name=document.getElementById('pm-custom').value.trim();
     if(!name){alert('플랫폼을 선택해 주세요.');return;}
     if(w.platforms.find(p=>p.name===name)){alert('이미 등록된 플랫폼이에요.');return;}
-    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays,hiatusPattern,hiatusBase});
+    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays,hiatusPattern,hiatusBase,hiatusStart,hiatusEnd});
     saveData();closeModal('platformModal');render();showToast('플랫폼을 추가했어요');
   }
 }

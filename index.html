@@ -475,17 +475,6 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
             <div class="drop-menu-item" onclick="setTypeFilter('etc')"><div class="drop-dot" style="background:#A09A93"></div><div class="drop-check" id="tc-etc"></div>기타</div>
           </div>
         </div>
-        <!-- 상태 드롭다운 -->
-        <div class="drop-filter" id="tabDropWrap">
-          <button class="drop-filter-btn" id="tabDropBtn" onclick="toggleDrop('tabDrop')">
-            <span id="tabDropLabel">상태</span> ▾
-          </button>
-          <div class="drop-menu hidden" id="tabDrop">
-            <div class="drop-menu-item" onclick="setTab('all')"><div class="drop-check" id="tb-all">✓</div>전체</div>
-            <div class="drop-menu-item" onclick="setTab('pending')"><div class="drop-check" id="tb-pending"></div>미처리</div>
-            <div class="drop-menu-item" onclick="setTab('done')"><div class="drop-check" id="tb-done"></div>완료</div>
-          </div>
-        </div>
       </div>
 
       <div id="workList"></div>
@@ -929,7 +918,12 @@ function renderWorks(){
     // 작품 요약 (접힌 상태에서 보여줄 정보)
     const pendingTasks=tasks.filter(t=>t.workId===w.id&&!t.done);
     const nearestTask=pendingTasks.sort((a,b)=>dayDiff(a.date)-dayDiff(b.date))[0];
-    const summaryText=nearestTask?`${typeLabel[nearestTask.type]} ${ddayLabel(dayDiff(nearestTask.date))}`:pendingTasks.length===0?'이번 주 일정 없음':'';
+    const summaryText=nearestTask?`${typeLabel[nearestTask.type]} ${ddayLabel(dayDiff(nearestTask.date))} · ${nearestTask.author}`:pendingTasks.length===0?'미처리 일정 없음':'';
+    const writerNames=w.writers.map(wr=>wr.name).join(' · ');
+    const platformSummary=w.platforms.length>0?w.platforms.map(p=>{
+      const stMap={serializing:'연재 중',hiatus:'휴재',completed:'완결',production:'제작 중'};
+      return `${p.name}${p.status==='serializing'&&p.episode!=null?' '+p.episode+'화':''} ${stMap[p.status]||''}`;
+    }).join(' / '):'';
 
     let pHtml=`<div class="platform-area"><div class="platform-row"><span class="platform-label">플랫폼</span>`;
     for(const p of w.platforms){
@@ -971,7 +965,9 @@ function renderWorks(){
           <div class="work-summary">
             <span class="badge ${w.paired?'badge-collab':'badge-solo'}">${w.paired?'글·그림 합작':'단독'}</span>
             ${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}
-            ${summaryText?`<span style="color:var(--text3);font-size:11px">${summaryText}</span>`:''}
+            <span style="color:var(--text2);font-size:11px">${writerNames}</span>
+            ${platformSummary?`<span style="color:var(--text3);font-size:11px">· ${platformSummary}</span>`:''}
+            ${summaryText?`<span style="color:${nearestTask&&dayDiff(nearestTask.date)<=0?'var(--red)':nearestTask&&dayDiff(nearestTask.date)<=3?'var(--amber)':'var(--text3)'};font-size:11px;font-weight:500">· ${summaryText}</span>`:''}
           </div>
         </div>
         <div class="work-header-right">
@@ -1157,59 +1153,44 @@ function renderCalendar(){
   window._calDayTasks={};
   // 이달 업로드일 미리 계산 (연재 중인 플랫폼의 요일)
   const uploadDayMap={};
-  works.forEach(w=>{
-    if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
-    w.platforms.forEach(p=>{
-      // 연재 중이거나 휴재 중인 플랫폼 모두 처리
-      if(p.status!=='serializing'&&p.status!=='hiatus')return;
-      if(!p.uploadDays||p.uploadDays.length===0)return;
-      const hiatusStart=p.hiatusStart?new Date(p.hiatusStart):null;
-      const hiatusEnd=p.hiatusEnd?new Date(p.hiatusEnd):null;
-      p.uploadDays.forEach(dow=>{
-        for(let d=1;d<=lastDate;d++){
-          const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-          if(new Date(dateStr).getDay()!==dow)continue;
-          if(isHiatusDate(dateStr,p))continue;
-          const cur=new Date(dateStr);
-          // 휴재 기간 내 날짜는 uploadDayMap에 넣지 않음 (hiatusPeriodMap에서 처리)
-          if(hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd))continue;
-          if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
-          uploadDayMap[dateStr].push({work:w.title,platform:p.name});
-        }
-      });
-    });
-  });
-  // 정기 휴재 맵
   const hiatusMap={};
   const hiatusPeriodMap={};
   works.forEach(w=>{
     if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
     w.platforms.forEach(p=>{
-      if(p.status==='serializing'&&p.uploadDays&&p.uploadDays.length>0&&p.hiatusPattern&&p.hiatusPattern!=='none'){
-        p.uploadDays.forEach(dow=>{
-          for(let d=1;d<=lastDate;d++){
-            const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
-            if(new Date(dateStr).getDay()!==dow)continue;
-            if(isHiatusDate(dateStr,p)){
-              if(!hiatusMap[dateStr])hiatusMap[dateStr]=[];
-              hiatusMap[dateStr].push({work:w.title,platform:p.name});
-            }
-          }
-        });
-      }
-      if(p.status==='hiatus'&&p.hiatusStart){
-        const start=new Date(p.hiatusStart);
-        const end=p.hiatusEnd?new Date(p.hiatusEnd):null;
+      if(!p.uploadDays||p.uploadDays.length===0)return;
+      const hiatusStart=p.hiatusStart?new Date(p.hiatusStart):null;
+      const hiatusEnd=p.hiatusEnd?new Date(p.hiatusEnd):null;
+
+      p.uploadDays.forEach(dow=>{
         for(let d=1;d<=lastDate;d++){
           const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const cur=new Date(dateStr);
-          if(cur>=start&&(!end||cur<=end)){
-            if(p.uploadDays&&p.uploadDays.length>0&&!p.uploadDays.includes(cur.getDay()))continue;
+          if(cur.getDay()!==dow)continue;
+
+          // 정기 휴재 패턴 체크 (연재 중일 때만)
+          if(p.status==='serializing'&&isHiatusDate(dateStr,p)){
+            if(!hiatusMap[dateStr])hiatusMap[dateStr]=[];
+            hiatusMap[dateStr].push({work:w.title,platform:p.name});
+            continue;
+          }
+
+          // 휴재 기간 체크
+          if(hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd)){
+            // 이 날짜는 연재 요일인데 휴재 기간 → 휴재 표시
             if(!hiatusPeriodMap[dateStr])hiatusPeriodMap[dateStr]=[];
             hiatusPeriodMap[dateStr].push({work:w.title,platform:p.name});
+            continue;
           }
+
+          // 완결/제작중은 업로드일 표시 안함
+          if(p.status==='completed'||p.status==='production')continue;
+
+          // 나머지(연재 중이거나 휴재지만 휴재 시작 전)는 업로드일 표시
+          if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
+          uploadDayMap[dateStr].push({work:w.title,platform:p.name});
         }
-      }
+      });
     });
   });
   for(let d=1;d<=lastDate;d++){
@@ -1562,7 +1543,6 @@ function savePlatform(){
 
 // 초기 드롭 상태 설정
 document.getElementById('tc-all').textContent='✓';
-document.getElementById('tb-all').textContent='✓';
 </script>
 </body>
 </html>

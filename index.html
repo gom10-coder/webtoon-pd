@@ -1370,8 +1370,12 @@ function openCalPopup(dateStr,event){
   });
   document.getElementById('calPopupList').innerHTML=html;
   const rect=event.target.getBoundingClientRect();
-  popup.style.left=Math.min(rect.left,window.innerWidth-280)+'px';
-  popup.style.top=(rect.bottom+8)+'px';
+  const popupMaxH=Math.floor(window.innerHeight*0.65);
+  const spaceBelow=window.innerHeight-(rect.bottom+8);
+  const top=spaceBelow>=150?rect.bottom+8:Math.max(8,rect.top-popupMaxH-8);
+  popup.style.left=Math.min(rect.left,window.innerWidth-290)+'px';
+  popup.style.top=top+'px';
+  popup.style.maxHeight=popupMaxH+'px';
   overlay.style.display='block';popup.style.display='block';
 }
 function closeCalPopup(){document.getElementById('calPopup').style.display='none';document.getElementById('calPopupOverlay').style.display='none';}

@@ -985,7 +985,33 @@ function renderWorks(){
 
 function renderPlatformOverview(){
   let html='';
-  for(const w of works){if(!w.platforms.length)continue;let rows='';for(const p of w.platforms){const stMap={serializing:{cls:'psb-s',label:'연재 중'},hiatus:{cls:'psb-h',label:'휴재'},completed:{cls:'psb-c',label:'완결'},planned:{cls:'psb-p',label:'연재 예정'},production:{cls:'psb-pr',label:'제작 중'}};const si=stMap[p.status]||stMap['planned'];rows+=`<div class="poc-platform-row"><span class="poc-platform-name">${p.name}</span>${p.status==='serializing'?`<span class="poc-ep">${p.episode!=null?p.episode+'화':'-'}</span>`:''}<span class="poc-status-badge ${si.cls}">${si.label}</span>${p.link?`<a href="${p.link}" target="_blank" style="font-size:11px;color:var(--accent);text-decoration:none">↗</a>`:''}</div>`;}html+=`<div class="platform-overview-card"><div class="poc-work">${w.title}${w.contracted?` <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:10px;font-weight:700">📋</span>`:''}</div>${rows}</div>`;}
+  const tod=todayStr();
+  for(const w of works){
+    if(!w.platforms.length)continue;
+    let rows='';
+    for(const p of w.platforms){
+      // 현재 날짜 기준 실제 상태 판단
+      let displayStatus=p.status;
+      if(p.hiatusStart){
+        const hs=new Date(p.hiatusStart);
+        const he=p.hiatusEnd?new Date(p.hiatusEnd):null;
+        const cur=new Date(tod);
+        if(cur>=hs&&(!he||cur<=he))displayStatus='hiatus';
+        else if(he&&cur>he)displayStatus='serializing'; // 휴재 끝나면 연재 중으로
+      }
+      const stMap={serializing:{cls:'psb-s',label:'연재 중'},hiatus:{cls:'psb-h',label:'휴재 중'},completed:{cls:'psb-c',label:'완결'},production:{cls:'psb-pr',label:'제작 중'}};
+      const si=stMap[displayStatus]||stMap['serializing'];
+      const cardStyle=p.link?'cursor:pointer':'';
+      const clickHandler=p.link?`onclick="window.open('${p.link}','_blank')"`:'' ;
+      rows+=`<div class="poc-platform-row" style="${cardStyle}" ${clickHandler}>
+        <span class="poc-platform-name">${p.name}</span>
+        ${p.status==='serializing'&&p.episode!=null?`<span class="poc-ep">${p.episode}화</span>`:''}
+        <span class="poc-status-badge ${si.cls}">${si.label}</span>
+        ${p.link?`<span style="font-size:10px;color:var(--accent)">↗ 바로가기</span>`:''}
+      </div>`;
+    }
+    html+=`<div class="platform-overview-card"><div class="poc-work">${w.title}${w.contracted?` <span style="font-size:10px;color:var(--blue);background:var(--blue-light);padding:1px 6px;border-radius:10px;font-weight:700">📋</span>`:''}</div>${rows}</div>`;
+  }
   if(!html)html=`<div class="empty-state"><div class="empty-icon">◉</div><div class="empty-title">등록된 플랫폼이 없어요</div></div>`;
   document.getElementById('platformOverview').innerHTML=html;
 }
@@ -1172,31 +1198,32 @@ function renderCalendar(){
       const hiatusStart=p.hiatusStart?new Date(p.hiatusStart):null;
       const hiatusEnd=p.hiatusEnd?new Date(p.hiatusEnd):null;
 
+      // 완결/제작중은 달력 표시 안함
+      if(p.status==='completed'||p.status==='production')return;
+
       p.uploadDays.forEach(dow=>{
         for(let d=1;d<=lastDate;d++){
           const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const cur=new Date(dateStr);
           if(cur.getDay()!==dow)continue;
 
-          // 정기 휴재 패턴 체크 (연재 중일 때만, 휴재 기간 밖일 때만)
           const inHiatusPeriod=hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd);
-          if((p.status==='serializing'||p.status==='hiatus')&&!inHiatusPeriod&&isHiatusDate(dateStr,p)){
+
+          // 정기 휴재 패턴 체크 (휴재 기간 밖일 때만)
+          if(!inHiatusPeriod&&isHiatusDate(dateStr,p)){
             if(!hiatusMap[dateStr])hiatusMap[dateStr]=[];
             hiatusMap[dateStr].push({work:w.title,platform:p.name});
             continue;
           }
 
-          // 휴재 기간 체크 (상태 무관 — 연재 중이어도 휴재 기간이면 휴재 표시)
+          // 휴재 기간 내
           if(inHiatusPeriod){
             if(!hiatusPeriodMap[dateStr])hiatusPeriodMap[dateStr]=[];
             hiatusPeriodMap[dateStr].push({work:w.title,platform:p.name});
             continue;
           }
 
-          // 완결/제작중은 업로드일 표시 안함
-          if(p.status==='completed'||p.status==='production')continue;
-
-          // 휴재 상태지만 휴재 기간 이전/이후 → 업로드일 표시
+          // 그 외 모두 업로드일 표시 (연재 중, 휴재 상태지만 기간 외)
           if(!uploadDayMap[dateStr])uploadDayMap[dateStr]=[];
           uploadDayMap[dateStr].push({work:w.title,platform:p.name});
         }

@@ -272,7 +272,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 
 /* 달력 더보기 팝업 */
 .cal-popup-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,0.2)}
-.cal-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:201;width:260px;max-height:320px;overflow-y:auto}
+.cal-popup{position:fixed;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px;box-shadow:0 8px 32px rgba(0,0,0,0.15);z-index:201;width:280px;max-height:70vh;overflow-y:auto}
 .cal-popup-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
 .cal-popup-date{font-size:13px;font-weight:700;color:var(--text)}
 .cal-popup-close{font-size:16px;color:var(--text3);background:none;border:none;cursor:pointer;padding:0}
@@ -355,7 +355,29 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 .toast{position:fixed;bottom:28px;right:28px;background:var(--text);color:var(--surface);font-size:13px;font-weight:500;padding:12px 20px;border-radius:var(--radius);box-shadow:0 4px 20px rgba(0,0,0,0.2);z-index:999;opacity:0;transform:translateY(8px);transition:all 0.25s;pointer-events:none}
 .toast.show{opacity:1;transform:translateY(0)}
 
-@media(max-width:768px){
+/* 대시보드 2단 레이아웃 */
+.dash-layout{display:grid;grid-template-columns:300px 1fr;gap:20px;align-items:start}
+.dash-left{display:flex;flex-direction:column;gap:12px;position:sticky;top:24px}
+.dash-right{min-width:0}
+
+/* 알림 섹션 */
+.alert-section{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow)}
+.alert-header{font-size:13px;font-weight:700;color:var(--text);margin-bottom:10px}
+.alert-item{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:var(--radius);margin-bottom:6px;font-size:12px}
+.alert-item:last-child{margin-bottom:0}
+.alert-return{background:#EAF3DE;border-left:3px solid #3B6D11;border-radius:0 var(--radius) var(--radius) 0}
+.alert-launch{background:#E6F1FB;border-left:3px solid #185FA5;border-radius:0 var(--radius) var(--radius) 0}
+.alert-dday{background:#FAEEDA;border-left:3px solid #854F0B;border-radius:0 var(--radius) var(--radius) 0}
+.alert-text{flex:1;color:var(--text)}
+.alert-return .alert-text{color:#27500A}
+.alert-launch .alert-text{color:#042C53}
+.alert-dday .alert-text{color:#412402}
+.alert-badge{font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;white-space:nowrap}
+.alert-return .alert-badge{background:#C0DD97;color:#173404}
+.alert-launch .alert-badge{background:#B5D4F4;color:#042C53}
+.alert-dday .alert-badge{background:#FAC775;color:#412402}
+
+@media(max-width:900px){.dash-layout{grid-template-columns:1fr}.dash-left{position:static}}
   .sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap}
   .main{margin-left:0;padding:20px 16px;max-width:100vw}
   .stats-grid{grid-template-columns:1fr}
@@ -427,57 +449,74 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
         </div>
       </div>
 
-      <!-- 공지 (접기/펼치기) -->
-      <div class="notice-section">
-        <div class="notice-header">
-          <span class="notice-icon">📌</span>
-          <span class="notice-title">공지 / 메모</span>
-          <button class="notice-toggle-btn" id="noticeToggleBtn" onclick="toggleNoticeBody()">접기 ▲</button>
-          <button class="notice-edit-btn" id="noticeEditBtn" onclick="toggleNoticeEdit()">수정</button>
-        </div>
-        <div class="notice-body" id="noticeBody">
-          <div class="notice-content" id="noticeContent" style="margin-top:8px"></div>
-          <textarea class="notice-input" id="noticeInput" style="display:none;margin-top:8px" placeholder="이번 주 공지나 메모를 입력하세요..."></textarea>
-        </div>
-      </div>
+      <!-- 2단 레이아웃 -->
+      <div class="dash-layout">
 
-      <!-- TODAY TO-DO -->
-      <div class="todo-section">
-        <div class="todo-header">
-          <span class="todo-icon">✅</span>
-          <span class="todo-title">오늘 할 일</span>
-          <span class="todo-count" id="todoCount"></span>
-          <span class="todo-date" id="todoDate"></span>
-        </div>
-        <div class="todo-list" id="todoList"></div>
-      </div>
+        <!-- 왼쪽 고정 패널 -->
+        <div class="dash-left">
 
-      <!-- 필터 바: 계약 + 드롭다운 -->
-      <div class="dash-filter-bar">
-        <div class="contract-toggle" id="contractToggle"></div>
-        <div class="filter-divider"></div>
-        <!-- 유형 드롭다운 -->
-        <div class="drop-filter" id="typeDropWrap">
-          <button class="drop-filter-btn" id="typeDropBtn" onclick="toggleDrop('typeDrop')">
-            <span id="typeDropLabel">업무 유형</span> ▾
-          </button>
-          <div class="drop-menu hidden" id="typeDrop">
-            <div class="drop-menu-item" onclick="setTypeFilter('all')"><div class="drop-check" id="tc-all">✓</div>전체</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('deadline')"><div class="drop-dot" style="background:var(--red)"></div><div class="drop-check" id="tc-deadline"></div>원고 마감</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('conti')"><div class="drop-dot" style="background:#8B4513"></div><div class="drop-check" id="tc-conti"></div>콘티 마감</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('feedback')"><div class="drop-dot" style="background:#6A1A7A"></div><div class="drop-check" id="tc-feedback"></div>피드백 작성</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('reply')"><div class="drop-dot" style="background:var(--amber)"></div><div class="drop-check" id="tc-reply"></div>답장 대기</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('meeting')"><div class="drop-dot" style="background:var(--blue)"></div><div class="drop-check" id="tc-meeting"></div>미팅/통화</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('contract-wait')"><div class="drop-dot" style="background:#B8620A"></div><div class="drop-check" id="tc-contract-wait"></div>계약서 대기</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('cover')"><div class="drop-dot" style="background:#C0392B"></div><div class="drop-check" id="tc-cover"></div>표지 작업</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('proposal')"><div class="drop-dot" style="background:#2D6FAA"></div><div class="drop-check" id="tc-proposal"></div>기획안 전달</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('charasheet')"><div class="drop-dot" style="background:#6A4A9A"></div><div class="drop-check" id="tc-charasheet"></div>캐시트</div>
-            <div class="drop-menu-item" onclick="setTypeFilter('etc')"><div class="drop-dot" style="background:#A09A93"></div><div class="drop-check" id="tc-etc"></div>기타</div>
+          <!-- 공지 -->
+          <div class="notice-section">
+            <div class="notice-header">
+              <span class="notice-icon">📌</span>
+              <span class="notice-title">공지 / 메모</span>
+              <button class="notice-toggle-btn" id="noticeToggleBtn" onclick="toggleNoticeBody()">접기 ▲</button>
+              <button class="notice-edit-btn" id="noticeEditBtn" onclick="toggleNoticeEdit()">수정</button>
+            </div>
+            <div class="notice-body" id="noticeBody">
+              <div class="notice-content" id="noticeContent" style="margin-top:8px"></div>
+              <textarea class="notice-input" id="noticeInput" style="display:none;margin-top:8px" placeholder="이번 주 공지나 메모를 입력하세요..."></textarea>
+            </div>
           </div>
-        </div>
-      </div>
 
-      <div id="workList"></div>
+          <!-- 알림 -->
+          <div class="alert-section" id="alertSection" style="display:none">
+            <div class="alert-header">🔔 알림</div>
+            <div id="alertList"></div>
+          </div>
+
+          <!-- 오늘 할 일 -->
+          <div class="todo-section">
+            <div class="todo-header">
+              <span class="todo-icon">✅</span>
+              <span class="todo-title">오늘 할 일</span>
+              <span class="todo-count" id="todoCount"></span>
+              <span class="todo-date" id="todoDate"></span>
+            </div>
+            <div class="todo-list" id="todoList"></div>
+          </div>
+
+        </div>
+
+        <!-- 오른쪽 작품 목록 -->
+        <div class="dash-right">
+          <!-- 필터 바 -->
+          <div class="dash-filter-bar">
+            <div class="contract-toggle" id="contractToggle"></div>
+            <div class="filter-divider"></div>
+            <div class="drop-filter" id="typeDropWrap">
+              <button class="drop-filter-btn" id="typeDropBtn" onclick="toggleDrop('typeDrop')">
+                <span id="typeDropLabel">업무 유형</span> ▾
+              </button>
+              <div class="drop-menu hidden" id="typeDrop">
+                <div class="drop-menu-item" onclick="setTypeFilter('all')"><div class="drop-check" id="tc-all">✓</div>전체</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('deadline')"><div class="drop-dot" style="background:var(--red)"></div><div class="drop-check" id="tc-deadline"></div>원고 마감</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('conti')"><div class="drop-dot" style="background:#8B4513"></div><div class="drop-check" id="tc-conti"></div>콘티 마감</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('feedback')"><div class="drop-dot" style="background:#6A1A7A"></div><div class="drop-check" id="tc-feedback"></div>피드백 작성</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('reply')"><div class="drop-dot" style="background:var(--amber)"></div><div class="drop-check" id="tc-reply"></div>답장 대기</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('meeting')"><div class="drop-dot" style="background:var(--blue)"></div><div class="drop-check" id="tc-meeting"></div>미팅/통화</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('contract-wait')"><div class="drop-dot" style="background:#B8620A"></div><div class="drop-check" id="tc-contract-wait"></div>계약서 대기</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('cover')"><div class="drop-dot" style="background:#C0392B"></div><div class="drop-check" id="tc-cover"></div>표지 작업</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('proposal')"><div class="drop-dot" style="background:#2D6FAA"></div><div class="drop-check" id="tc-proposal"></div>기획안 전달</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('charasheet')"><div class="drop-dot" style="background:#6A4A9A"></div><div class="drop-check" id="tc-charasheet"></div>캐시트</div>
+                <div class="drop-menu-item" onclick="setTypeFilter('etc')"><div class="drop-dot" style="background:#A09A93"></div><div class="drop-check" id="tc-etc"></div>기타</div>
+              </div>
+            </div>
+          </div>
+          <div id="workList"></div>
+        </div>
+
+      </div>
     </div>
 
     <!-- 연재 현황 -->
@@ -644,6 +683,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
       <div class="form-hint">선택한 요일이 달력에 업로드일로 자동 표시돼요</div>
     </div>
+    <div class="form-group" id="pm-start-group"><label class="form-label">연재 시작일 (선택)</label><input class="form-input" id="pm-start-date" type="date"/><div class="form-hint">입력하면 시작일 이전 달력에 업로드일이 표시되지 않아요</div></div>
     <div class="form-group" id="pm-hiatus-period-group" style="display:none">
       <label class="form-label">휴재 기간</label>
       <div class="form-row">
@@ -790,7 +830,7 @@ function render(){
     const hasDday=tasks.some(t=>t.workId===w.id&&!t.done&&dayDiff(t.date)===0);
     if(hasDday)expanded[w.id]=true;
   });
-  renderNotice();renderTodo();renderContractToggle();renderWorks();
+  renderNotice();renderAlerts();renderTodo();renderContractToggle();renderWorks();
   const ts=todayStr(),d=new Date(ts),days=['일','월','화','수','목','금','토'];
   document.getElementById('todayDisplay').textContent=`${d.getFullYear()}. ${d.getMonth()+1}. ${d.getDate()}. (${days[d.getDay()]})`;
   checkPushNotification();
@@ -844,6 +884,40 @@ function renderTodo(){
     </div>`;
   });
   document.getElementById('todoList').innerHTML=html;
+}
+
+// ── 알림 (복귀/런칭 D-7 이내) ──
+function renderAlerts(){
+  const alerts=[];
+  const tod=todayStr();
+  works.forEach(w=>{
+    w.platforms.forEach(p=>{
+      // 복귀 알림: 휴재 종료일 D-7 이내
+      if(p.hiatusEnd){
+        const diff=dayDiff(p.hiatusEnd);
+        if(diff>=0&&diff<=7){
+          const cls=diff===0?'alert-dday':'alert-return';
+          const badge=diff===0?'복귀 D-day':`복귀 D-${diff}`;
+          alerts.push({cls,icon:'🔄',text:`&lt;${w.title}&gt; 휴재 종료 · ${p.hiatusEnd} 복귀`,badge,diff});
+        }
+      }
+      // 런칭 알림: 연재 시작일 D-7 이내
+      if(p.startDate){
+        const diff=dayDiff(p.startDate);
+        if(diff>=0&&diff<=7){
+          const cls=diff===0?'alert-dday':'alert-launch';
+          const badge=diff===0?'런칭 D-day':`런칭 D-${diff}`;
+          alerts.push({cls,icon:'🚀',text:`&lt;${w.title}&gt; 연재 시작 · ${p.startDate} 런칭`,badge,diff});
+        }
+      }
+    });
+  });
+  alerts.sort((a,b)=>a.diff-b.diff);
+  const sec=document.getElementById('alertSection');
+  const list=document.getElementById('alertList');
+  if(!alerts.length){sec.style.display='none';return;}
+  sec.style.display='block';
+  list.innerHTML=alerts.map(a=>`<div class="alert-item ${a.cls}"><span style="font-size:14px">${a.icon}</span><span class="alert-text">${a.text}</span><span class="alert-badge">${a.badge}</span></div>`).join('');
 }
 
 // ── 계약 필터 ──
@@ -1195,6 +1269,7 @@ function renderCalendar(){
     if(calSelectedWorkIds.size>0&&!calSelectedWorkIds.has(w.id))return;
     w.platforms.forEach(p=>{
       if(!p.uploadDays||p.uploadDays.length===0)return;
+      const startDate=p.startDate?new Date(p.startDate):null;
       const hiatusStart=p.hiatusStart?new Date(p.hiatusStart):null;
       const hiatusEnd=p.hiatusEnd?new Date(p.hiatusEnd):null;
 
@@ -1206,6 +1281,9 @@ function renderCalendar(){
           const dateStr=`${calYear}-${String(calMonth+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
           const cur=new Date(dateStr);
           if(cur.getDay()!==dow)continue;
+
+          // 연재 시작일 이전은 표시 안함
+          if(startDate&&cur<startDate)continue;
 
           const inHiatusPeriod=hiatusStart&&cur>=hiatusStart&&(!hiatusEnd||cur<=hiatusEnd);
 
@@ -1521,6 +1599,7 @@ function openPlatformModal(wId,platformName,e){
   document.getElementById('pm-ep-group').style.display=isActive?'':'none';
   document.getElementById('pm-days-group').style.display=isActive?'':'none';
   document.getElementById('pm-hiatus-pattern-group').style.display=isActive?'':'none';
+  document.getElementById('pm-start-date').value=existingP?.startDate||'';
   document.getElementById('pm-hiatus-period-group').style.display=(selectedStatus==='hiatus')?'':'none';
   document.getElementById('pm-hiatus-start').value=existingP?.hiatusStart||'';
   document.getElementById('pm-hiatus-end').value=existingP?.hiatusEnd||'';
@@ -1562,18 +1641,19 @@ function savePlatform(){
   const uploadDays=isActive?[...document.querySelectorAll('.pm-day-cb:checked')].map(cb=>parseInt(cb.value)):[];
   const hiatusPattern=isActive?(document.getElementById('pm-hiatus-pattern').value||'none'):'none';
   const hiatusBase=document.getElementById('pm-hiatus-base').value||'';
+  const startDate=document.getElementById('pm-start-date').value||'';
   const hiatusStart=document.getElementById('pm-hiatus-start').value||'';
   const hiatusEnd=document.getElementById('pm-hiatus-end').value||'';
   if(editingPlatformName){
     const p=w.platforms.find(p=>p.name===editingPlatformName);
-    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;p.hiatusPattern=hiatusPattern;p.hiatusBase=hiatusBase;p.hiatusStart=hiatusStart;p.hiatusEnd=hiatusEnd;}
+    if(p){p.status=selectedStatus;p.episode=ep;p.link=link;p.uploadDays=uploadDays;p.hiatusPattern=hiatusPattern;p.hiatusBase=hiatusBase;p.hiatusStart=hiatusStart;p.hiatusEnd=hiatusEnd;p.startDate=startDate;}
     saveData();closeModal('platformModal');render();showToast('플랫폼을 수정했어요');
   } else {
     let name=document.getElementById('pm-name').value;
     if(name==='__custom')name=document.getElementById('pm-custom').value.trim();
     if(!name){alert('플랫폼을 선택해 주세요.');return;}
     if(w.platforms.find(p=>p.name===name)){alert('이미 등록된 플랫폼이에요.');return;}
-    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays,hiatusPattern,hiatusBase,hiatusStart,hiatusEnd});
+    w.platforms.push({name,status:selectedStatus,episode:ep,link,uploadDays,hiatusPattern,hiatusBase,hiatusStart,hiatusEnd,startDate});
     saveData();closeModal('platformModal');render();showToast('플랫폼을 추가했어요');
   }
 }

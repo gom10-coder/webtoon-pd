@@ -994,7 +994,7 @@ function renderWorks(){
     // 작품 요약 (접힌 상태에서 보여줄 정보)
     const pendingTasks=tasks.filter(t=>t.workId===w.id&&!t.done);
     const nearestTask=pendingTasks.sort((a,b)=>dayDiff(a.date)-dayDiff(b.date))[0];
-    const summaryText=nearestTask?`${typeLabel[nearestTask.type]} ${ddayLabel(dayDiff(nearestTask.date))} · ${nearestTask.author}`:pendingTasks.length===0?'미처리 일정 없음':'';
+    const summaryText=nearestTask?`${typeLabel[nearestTask.type]} ${ddayLabel(dayDiff(nearestTask.date))}`:pendingTasks.length===0?'미처리 일정 없음':'';
     const writerNames=w.writers.map(wr=>wr.name).join(' · ');
     const platformSummary=w.platforms.length>0?w.platforms.map(p=>{
       const stMap={serializing:'연재 중',hiatus:'휴재',completed:'완결',production:'제작 중'};

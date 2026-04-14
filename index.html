@@ -410,6 +410,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">◈</span> 대시보드</button>
       <button class="nav-item" onclick="showPage('platform',this)"><span class="nav-icon">◉</span> 연재 현황</button>
       <button class="nav-item" onclick="showPage('calendar',this)"><span class="nav-icon">◑</span> 마감 달력</button>
+      <button class="nav-item" onclick="showPage('archive',this)"><span class="nav-icon">◻</span> 보관함</button>
       <button class="nav-item" onclick="showPage('slack',this)"><span class="nav-icon">◇</span> 슬랙 알림</button>
     </nav>
     <div class="sidebar-footer">
@@ -527,6 +528,14 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div style="height:300px"></div>
     </div>
 
+    <!-- 보관함 -->
+    <div id="page-archive" style="display:none">
+      <div class="page-header">
+        <div><div class="page-title">보관함</div><div class="page-subtitle">중단된 작품 히스토리</div></div>
+      </div>
+      <div id="archiveList"></div>
+    </div>
+
     <!-- 슬랙 알림 -->
     <div id="page-slack" style="display:none">
       <div class="page-header"><div><div class="page-title">슬랙 알림 설정</div><div class="page-subtitle">마감 일정 도래 시 슬랙으로 알림 받기</div></div></div>
@@ -552,6 +561,26 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       </div>
     </div>
   </main>
+</div>
+
+<!-- 모달: 보관 -->
+<div class="modal-overlay" id="archiveModal">
+  <div class="modal">
+    <div class="modal-header"><div class="modal-title" id="archiveModalTitle">작품 보관</div><button class="modal-close" onclick="closeModal('archiveModal')">✕</button></div>
+    <div class="form-group"><label class="form-label">중단 단계</label>
+      <select class="form-select" id="am-stage">
+        <option value="contact">컨택 단계</option>
+        <option value="meeting">미팅 단계</option>
+        <option value="proposal">기획안 단계</option>
+        <option value="conti">콘티 단계</option>
+        <option value="contract">계약 단계</option>
+      </select>
+    </div>
+    <div class="form-group"><label class="form-label">불발 사유</label>
+      <textarea class="form-textarea" id="am-reason" placeholder="예: 1화 콘티 단계에서 방향성 이견으로 중단"></textarea>
+    </div>
+    <div class="modal-footer"><button class="btn" onclick="closeModal('archiveModal')">취소</button><button class="btn btn-primary" onclick="saveArchive()">보관하기</button></div>
+  </div>
 </div>
 
 <!-- 모달: 작품 -->
@@ -705,16 +734,16 @@ const firebaseConfig={apiKey:"AIzaSyCqUwH_Kc0kwYU3Fl95LyFx1eyXbjkIGLY",authDomai
 const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app),provider=new GoogleAuthProvider();
 let unsubscribe=null;
 function setSyncStatus(s,m){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncStatus').textContent=m;}
-async function saveToFirebase(){const u=auth.currentUser;if(!u)return;setSyncStatus('syncing','저장 중...');try{await setDoc(doc(db,"users",u.uid,"data","main"),{works,tasks,notice,nextId,slackWebhook,slackTime,updatedAt:Date.now()});setSyncStatus('connected','동기화됨');}catch(e){setSyncStatus('error','저장 실패');}}
-function startListening(uid){if(unsubscribe)unsubscribe();unsubscribe=onSnapshot(doc(db,"users",uid,"data","main"),(snap)=>{if(snap.exists()){const d=snap.data();works=d.works||[];tasks=d.tasks||[];notice=d.notice||'';nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);slackWebhook=d.slackWebhook||'';slackTime=d.slackTime||'09:00';updateSlackUI();updateNoticeUI();}else{works=[];tasks=[];notice='';nextId=1;saveToFirebase();}works.forEach(w=>{if(expanded[w.id]===undefined)expanded[w.id]=false;if(!w.memo)w.memo='';});render();document.getElementById('loadingOverlay').classList.add('hidden');setSyncStatus('connected','동기화됨');},()=>{setSyncStatus('error','연결 오류');document.getElementById('loadingOverlay').classList.add('hidden');});}
+async function saveToFirebase(){const u=auth.currentUser;if(!u)return;setSyncStatus('syncing','저장 중...');try{await setDoc(doc(db,"users",u.uid,"data","main"),{works,tasks,notice,nextId,slackWebhook,slackTime,archivedWorks,updatedAt:Date.now()});setSyncStatus('connected','동기화됨');}catch(e){setSyncStatus('error','저장 실패');}}
+function startListening(uid){if(unsubscribe)unsubscribe();unsubscribe=onSnapshot(doc(db,"users",uid,"data","main"),(snap)=>{if(snap.exists()){const d=snap.data();works=d.works||[];tasks=d.tasks||[];notice=d.notice||'';nextId=d.nextId||(Math.max(0,...tasks.map(t=>t.id),0)+1);slackWebhook=d.slackWebhook||'';slackTime=d.slackTime||'09:00';archivedWorks=d.archivedWorks||[];updateSlackUI();updateNoticeUI();}else{works=[];tasks=[];notice='';nextId=1;archivedWorks=[];saveToFirebase();}works.forEach(w=>{if(expanded[w.id]===undefined)expanded[w.id]=false;if(!w.memo)w.memo='';});render();document.getElementById('loadingOverlay').classList.add('hidden');setSyncStatus('connected','동기화됨');},()=>{setSyncStatus('error','연결 오류');document.getElementById('loadingOverlay').classList.add('hidden');});}
 window.loginWithGoogle=async()=>{try{await signInWithPopup(auth,provider);}catch(e){alert('로그인에 실패했어요.');}};
 window.logout=async()=>{if(unsubscribe)unsubscribe();await signOut(auth);};
-onAuthStateChanged(auth,(user)=>{if(user){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('loadingOverlay').classList.remove('hidden');document.getElementById('userAvatar').src=user.photoURL||'';document.getElementById('userName').textContent=user.displayName||user.email;document.getElementById('userInfo').style.display='flex';setSyncStatus('syncing','연결 중...');startListening(user.uid);}else{document.getElementById('loginScreen').classList.remove('hidden');document.getElementById('loadingOverlay').classList.add('hidden');document.getElementById('userInfo').style.display='none';works=[];tasks=[];notice='';nextId=1;}});
+onAuthStateChanged(auth,(user)=>{if(user){document.getElementById('loginScreen').classList.add('hidden');document.getElementById('loadingOverlay').classList.remove('hidden');document.getElementById('userAvatar').src=user.photoURL||'';document.getElementById('userName').textContent=user.displayName||user.email;document.getElementById('userInfo').style.display='flex';setSyncStatus('syncing','연결 중...');startListening(user.uid);}else{document.getElementById('loginScreen').classList.remove('hidden');document.getElementById('loadingOverlay').classList.add('hidden');document.getElementById('userInfo').style.display='none';works=[];tasks=[];notice='';nextId=1;archivedWorks=[];}});
 window._saveData=saveToFirebase;
 </script>
 
 <script>
-let works=[],tasks=[],notice='',nextId=1,slackWebhook='',slackTime='09:00';
+let works=[],tasks=[],notice='',nextId=1,slackWebhook='',slackTime='09:00',archivedWorks=[];
 function saveData(){if(window._saveData)window._saveData();}
 
 function todayStr(){const now=new Date(),kst=new Date(now.getTime()+9*60*60*1000);return kst.toISOString().slice(0,10);}
@@ -797,6 +826,7 @@ function showPage(name,el){
   if(name==='calendar')renderCalendar();
   if(name==='stats')renderStats();
   if(name==='slack')updateSlackUI();
+  if(name==='archive')renderArchive();
 }
 
 function render(){
@@ -1007,17 +1037,16 @@ function renderWorks(){
     html+=`<div class="work-card ${urgCls}">
       <div class="work-header" onclick="toggleWork('${w.id}')">
         <div class="work-title-area">
-          <div class="work-name-row"><span class="work-name">&lt;${w.title}&gt;</span>${contractBadge}</div>
+          <div class="work-name-row"><span class="work-name">&lt;${w.title}&gt;</span>${contractBadge}${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}</div>
           <div class="work-summary">
-            <span class="badge ${w.paired?'badge-collab':'badge-solo'}">${w.paired?'글·그림 합작':'단독'}</span>
-            ${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}
-            <span style="color:var(--text2);font-size:11px">${writerNames}</span>
-            ${platformSummary?`<span style="color:var(--text3);font-size:11px">· ${platformSummary}</span>`:''}
-            ${summaryText?`<span style="color:${nearestTask&&dayDiff(nearestTask.date)<=0?'var(--red)':nearestTask&&dayDiff(nearestTask.date)<=3?'var(--amber)':'var(--text3)'};font-size:11px;font-weight:500">· ${summaryText}</span>`:''}
+            <span style="font-size:12px;color:var(--text2)">${writerNames}</span>
+            ${platformSummary?`<span style="color:var(--text3);font-size:12px"> · ${platformSummary}</span>`:''}
+            ${summaryText?`<span style="color:${nearestTask&&dayDiff(nearestTask.date)<=0?'var(--red)':nearestTask&&dayDiff(nearestTask.date)<=3?'var(--amber)':'var(--accent)'};font-size:12px;font-weight:500"> · ${summaryText}</span>`:''}
           </div>
         </div>
         <div class="work-header-right">
           <button class="btn btn-sm" onclick="openWorkModal('${w.id}');event.stopPropagation()">수정</button>
+          <button class="btn btn-sm" style="color:var(--blue);border-color:var(--blue-light);background:var(--blue-light)" onclick="openArchiveModal('${w.id}');event.stopPropagation()">보관</button>
           <button class="btn btn-sm" onclick="deleteWork('${w.id}',event)" style="color:var(--text3);border-color:transparent">삭제</button>
           <span class="chevron ${isOpen?'open':''}">▼</span>
         </div>
@@ -1398,8 +1427,61 @@ function openModal(id){document.getElementById(id).classList.add('open');}
 function closeModal(id){document.getElementById(id).classList.remove('open');}
 document.querySelectorAll('.modal-overlay').forEach(el=>{el.addEventListener('click',function(e){if(e.target===this)this.classList.remove('open');});});
 
-// 작품 모달
-let editingWorkId=null;
+// ── 보관함 ──
+let archiveTargetWorkId=null;
+const stageLabel={contact:'컨택 단계',meeting:'미팅 단계',proposal:'기획안 단계',conti:'콘티 단계',contract:'계약 단계'};
+
+function openArchiveModal(wId){
+  archiveTargetWorkId=wId;
+  const w=works.find(w=>w.id===wId);
+  document.getElementById('archiveModalTitle').textContent=`<${w?w.title:''}> 보관`;
+  document.getElementById('am-stage').value='proposal';
+  document.getElementById('am-reason').value='';
+  openModal('archiveModal');
+}
+function saveArchive(){
+  const w=works.find(w=>w.id===archiveTargetWorkId);
+  if(!w)return;
+  const stage=document.getElementById('am-stage').value;
+  const reason=document.getElementById('am-reason').value.trim();
+  archivedWorks.push({id:w.id,title:w.title,writers:w.writers,platforms:w.platforms,stage,reason,archivedAt:todayStr()});
+  works=works.filter(w=>w.id!==archiveTargetWorkId);
+  tasks=tasks.filter(t=>t.workId!==archiveTargetWorkId);
+  saveData();closeModal('archiveModal');render();renderArchive();showToast('보관함으로 이동했어요');
+}
+function restoreArchive(id){
+  const a=archivedWorks.find(a=>a.id===id);
+  if(!a)return;
+  works.push({id:a.id,title:a.title,writers:a.writers,platforms:a.platforms,contracted:false,paired:a.writers.length>1,memo:''});
+  expanded[a.id]=false;
+  archivedWorks=archivedWorks.filter(a=>a.id!==id);
+  saveData();render();renderArchive();showToast('대시보드로 복구했어요');
+}
+function deleteArchive(id){
+  if(!confirm('완전히 삭제할까요? 복구할 수 없어요.'))return;
+  archivedWorks=archivedWorks.filter(a=>a.id!==id);
+  saveData();renderArchive();showToast('삭제했어요');
+}
+function renderArchive(){
+  const el=document.getElementById('archiveList');
+  if(!el)return;
+  if(!archivedWorks.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">보관된 작품이 없어요</div><div class="empty-desc">작품 카드의 보관 버튼으로 중단된 작품을 여기에 보관할 수 있어요</div></div>`;return;}
+  el.innerHTML=archivedWorks.slice().reverse().map(a=>`
+    <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);border-left:4px solid var(--border2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow)">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:15px;font-weight:700">&lt;${a.title}&gt;</span>
+        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;background:var(--surface2);color:var(--text2)">${stageLabel[a.stage]||a.stage} 중단</span>
+      </div>
+      <div style="font-size:11px;color:var(--text3);margin-bottom:8px">${a.writers.map(w=>w.name).join(' · ')} · ${a.archivedAt} 보관</div>
+      ${a.reason?`<div style="font-size:12px;color:var(--text2);background:var(--surface2);padding:8px 12px;border-radius:var(--radius);margin-bottom:10px">${a.reason}</div>`:''}
+      <div style="display:flex;gap:6px;justify-content:flex-end">
+        <button class="btn btn-sm" onclick="restoreArchive('${a.id}')">복구</button>
+        <button class="btn btn-sm" style="color:var(--red);border-color:transparent" onclick="deleteArchive('${a.id}')">삭제</button>
+      </div>
+    </div>`).join('');
+}
+
+// ── 작품 모달 ──
 function setWmContract(v){
   wmContractStatus=v;
   if(v==='done'){document.getElementById('wm-ct-done').style.cssText='border-color:#2D6FAA;background:var(--blue-light);color:var(--blue)';document.getElementById('wm-ct-not').style.cssText='';}

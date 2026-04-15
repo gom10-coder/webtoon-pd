@@ -410,7 +410,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <button class="nav-item active" onclick="showPage('dashboard',this)"><span class="nav-icon">◈</span> 대시보드</button>
       <button class="nav-item" onclick="showPage('platform',this)"><span class="nav-icon">◉</span> 연재 현황</button>
       <button class="nav-item" onclick="showPage('calendar',this)"><span class="nav-icon">◑</span> 마감 달력</button>
-      <button class="nav-item" onclick="showPage('archive',this)"><span class="nav-icon">◻</span> 보관함</button>
+      <button class="nav-item" onclick="showPage('archive',this)"><span class="nav-icon">◻</span> 드랍 이력</button>
       <button class="nav-item" onclick="showPage('slack',this)"><span class="nav-icon">◇</span> 슬랙 알림</button>
     </nav>
     <div class="sidebar-footer">
@@ -531,7 +531,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <!-- 보관함 -->
     <div id="page-archive" style="display:none">
       <div class="page-header">
-        <div><div class="page-title">보관함</div><div class="page-subtitle">중단된 작품 히스토리</div></div>
+        <div><div class="page-title">드랍 이력</div><div class="page-subtitle">중단된 작품 히스토리</div></div>
       </div>
       <div id="archiveList"></div>
     </div>
@@ -601,6 +601,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
       <div class="form-section-divider">그림작가</div>
       <div class="form-group"><label class="form-label">이름</label><input class="form-input" id="wm-artist" placeholder="예: 한소희 작가"/></div>
     </div>
+    <div class="form-group"><label class="form-label">구글 드라이브 링크 (선택)</label><input class="form-input" id="wm-drive" placeholder="https://drive.google.com/..."/><div class="form-hint">작품명 클릭 시 해당 폴더로 바로 이동해요</div></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('workModal')">취소</button><button class="btn btn-primary" onclick="saveWork()">저장</button></div>
   </div>
 </div>
@@ -1037,7 +1038,7 @@ function renderWorks(){
     html+=`<div class="work-card ${urgCls}">
       <div class="work-header" onclick="toggleWork('${w.id}')">
         <div class="work-title-area">
-          <div class="work-name-row"><span class="work-name">&lt;${w.title}&gt;</span>${contractBadge}${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}</div>
+          <div class="work-name-row"><span class="work-name" ${w.driveLink?`onclick="window.open('${w.driveLink}','_blank');event.stopPropagation()" style="cursor:pointer;text-decoration:none" title="구글 드라이브 열기"`:''}>&lt;${w.title}&gt;${w.driveLink?` <span style="font-size:10px;color:var(--accent)">↗</span>`:''}</span>${contractBadge}${urgentCount>0?`<span class="badge badge-urgent">긴급 ${urgentCount}건</span>`:''}</div>
           <div class="work-summary">
             <span style="font-size:12px;color:var(--text2)">${writerNames}</span>
             ${platformSummary?`<span style="color:var(--text3);font-size:12px"> · ${platformSummary}</span>`:''}
@@ -1465,7 +1466,7 @@ function deleteArchive(id){
 function renderArchive(){
   const el=document.getElementById('archiveList');
   if(!el)return;
-  if(!archivedWorks.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">보관된 작품이 없어요</div><div class="empty-desc">작품 카드의 보관 버튼으로 중단된 작품을 여기에 보관할 수 있어요</div></div>`;return;}
+  if(!archivedWorks.length){el.innerHTML=`<div class="empty-state"><div class="empty-icon">◻</div><div class="empty-title">홀드 히스토리가 없어요</div><div class="empty-desc">작품 카드의 보관 버튼으로 중단된 작품을 여기에 보관할 수 있어요</div></div>`;return;}
   el.innerHTML=archivedWorks.slice().reverse().map(a=>`
     <div style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);border-left:4px solid var(--border2);padding:16px 20px;margin-bottom:10px;box-shadow:var(--shadow)">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
@@ -1491,6 +1492,7 @@ function openWorkModal(wId){
   editingWorkId=wId||null;const w=wId?works.find(w=>w.id===wId):null;
   document.getElementById('workModalTitle').textContent=w?'작품 수정':'작품 추가';
   document.getElementById('wm-title').value=w?w.title:'';
+  document.getElementById('wm-drive').value=w?w.driveLink||'':'';
   document.getElementById('wm-paired').checked=w?w.paired:false;
   document.getElementById('wm-writer').value=w?w.writers[0].name:'';
   document.getElementById('wm-artist').value=w&&w.paired?w.writers[1].name:'';
@@ -1503,10 +1505,11 @@ function togglePairedFields(){document.getElementById('wm-artist-section').style
 function saveWork(){
   const title=document.getElementById('wm-title').value.trim(),paired=document.getElementById('wm-paired').checked;
   const writer=document.getElementById('wm-writer').value.trim(),artist=paired?document.getElementById('wm-artist').value.trim():'';
+  const driveLink=document.getElementById('wm-drive').value.trim();
   if(!title||!writer||(paired&&!artist)){alert('필수 항목을 입력해 주세요.');return;}
   const contracted=wmContractStatus==='done';
-  if(editingWorkId){const w=works.find(w=>w.id===editingWorkId);w.title=title;w.paired=paired;w.contracted=contracted;w.writers=paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}];}
-  else{const id='w'+Date.now();works.push({id,title,paired,contracted,writers:paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}],platforms:[],memo:''});expanded[id]=false;}
+  if(editingWorkId){const w=works.find(w=>w.id===editingWorkId);w.title=title;w.paired=paired;w.contracted=contracted;w.driveLink=driveLink;w.writers=paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}];}
+  else{const id='w'+Date.now();works.push({id,title,paired,contracted,driveLink,writers:paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}],platforms:[],memo:''});expanded[id]=false;}
   saveData();closeModal('workModal');render();showToast(editingWorkId?'작품을 수정했어요':'작품을 추가했어요');
 }
 

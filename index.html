@@ -623,6 +623,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div class="modal-header"><div class="modal-title" id="workModalTitle">작품 추가</div><button class="modal-close" onclick="closeModal('workModal')">✕</button></div>
     <div class="form-group"><label class="form-label">작품 제목</label><input class="form-input" id="wm-title" placeholder="예: 달빛소나타"/></div>
     <div class="checkbox-row"><input type="checkbox" id="wm-paired" onchange="togglePairedFields()"/><label for="wm-paired">글·그림 합작 (두 명이 함께 작업)</label></div>
+    <div class="checkbox-row"><input type="checkbox" id="wm-adapted" onchange="toggleAdaptedFields()"/><label for="wm-adapted">각색 작가 포함 (글·그림·각색 세 명)</label></div>
     <div class="form-group"><label class="form-label">계약 상태</label>
       <div style="display:flex;gap:8px">
         <div class="status-opt active-p" id="wm-ct-done" onclick="setWmContract('done')">📋 계약 완료</div>
@@ -634,6 +635,10 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
     <div id="wm-artist-section" style="display:none">
       <div class="form-section-divider">그림작가</div>
       <div class="form-group"><label class="form-label">이름</label><input class="form-input" id="wm-artist" placeholder="예: 한소희 작가"/></div>
+    </div>
+    <div id="wm-adapter-section" style="display:none">
+      <div class="form-section-divider">각색작가</div>
+      <div class="form-group"><label class="form-label">이름</label><input class="form-input" id="wm-adapter" placeholder="예: 김각색 작가"/></div>
     </div>
     <div class="form-group"><label class="form-label">구글 드라이브 링크 (선택)</label><input class="form-input" id="wm-drive" placeholder="https://drive.google.com/..."/><div class="form-hint">작품명 클릭 시 해당 폴더로 바로 이동해요</div></div>
     <div class="modal-footer"><button class="btn" onclick="closeModal('workModal')">취소</button><button class="btn btn-primary" onclick="saveWork()">저장</button></div>
@@ -1494,19 +1499,42 @@ function openWorkModal(wId){
   document.getElementById('wm-writer').value=w?w.writers[0].name:'';
   document.getElementById('wm-artist').value=w&&w.paired?w.writers[1].name:'';
   document.getElementById('wm-artist-section').style.display=(w?w.paired:false)?'':'none';
+  const hasAdapter=w&&w.writers.length>=3;
+  document.getElementById('wm-adapted').checked=hasAdapter;
+  document.getElementById('wm-adapter').value=hasAdapter?w.writers[2].name:'';
+  document.getElementById('wm-adapter-section').style.display=hasAdapter?'':'none';
   wmContractStatus=w?(w.contracted?'done':'not'):'done';
   setWmContract(wmContractStatus);
   openModal('workModal');
 }
-function togglePairedFields(){document.getElementById('wm-artist-section').style.display=document.getElementById('wm-paired').checked?'':'none';}
+function togglePairedFields(){
+  const paired=document.getElementById('wm-paired').checked;
+  document.getElementById('wm-artist-section').style.display=paired?'':'none';
+  if(paired){document.getElementById('wm-adapted').checked=false;document.getElementById('wm-adapter-section').style.display='none';}
+}
+function toggleAdaptedFields(){
+  const adapted=document.getElementById('wm-adapted').checked;
+  document.getElementById('wm-adapter-section').style.display=adapted?'':'none';
+  if(adapted){
+    document.getElementById('wm-paired').checked=true;
+    document.getElementById('wm-artist-section').style.display='';
+  }
+}
 function saveWork(){
   const title=document.getElementById('wm-title').value.trim(),paired=document.getElementById('wm-paired').checked;
-  const writer=document.getElementById('wm-writer').value.trim(),artist=paired?document.getElementById('wm-artist').value.trim():'';
+  const adapted=document.getElementById('wm-adapted').checked;
+  const writer=document.getElementById('wm-writer').value.trim();
+  const artist=paired?document.getElementById('wm-artist').value.trim():'';
+  const adapter=adapted?document.getElementById('wm-adapter').value.trim():'';
   const driveLink=document.getElementById('wm-drive').value.trim();
-  if(!title||!writer||(paired&&!artist)){alert('필수 항목을 입력해 주세요.');return;}
+  if(!title||!writer||(paired&&!artist)||(adapted&&!adapter)){alert('필수 항목을 입력해 주세요.');return;}
   const contracted=wmContractStatus==='done';
-  if(editingWorkId){const w=works.find(w=>w.id===editingWorkId);w.title=title;w.paired=paired;w.contracted=contracted;w.driveLink=driveLink;w.writers=paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}];}
-  else{const id='w'+Date.now();works.push({id,title,paired,contracted,driveLink,writers:paired?[{name:writer,role:'글'},{name:artist,role:'그림'}]:[{name:writer,role:'글·그림'}],platforms:[],memo:''});expanded[id]=false;}
+  let writers;
+  if(adapted){writers=[{name:writer,role:'글'},{name:artist,role:'그림'},{name:adapter,role:'각색'}];}
+  else if(paired){writers=[{name:writer,role:'글'},{name:artist,role:'그림'}];}
+  else{writers=[{name:writer,role:'글·그림'}];}
+  if(editingWorkId){const w=works.find(w=>w.id===editingWorkId);w.title=title;w.paired=paired;w.contracted=contracted;w.driveLink=driveLink;w.writers=writers;}
+  else{const id='w'+Date.now();works.push({id,title,paired,contracted,driveLink,writers,platforms:[],memo:''});expanded[id]=false;}
   saveData();closeModal('workModal');render();showToast(editingWorkId?'작품을 수정했어요':'작품을 추가했어요');
 }
 

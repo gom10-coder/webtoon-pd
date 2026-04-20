@@ -765,7 +765,7 @@ body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getFirestore, doc, onSnapshot, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { getAuth, GoogleAuthProvider, signInWithPopup, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-const firebaseConfig={apiKey:"AIzaSyCqUwH_Kc0kwYU3Fl95LyFx1eyXbjkIGLY",authDomain:"webtoon-pd-3edda.firebaseapp.com",projectId:"webtoon-pd-3edda",storageBucket:"webtoon-pd-3edda.firebasestorage.app",messagingSenderId:"173903637531",appId:"1:173903637531:web:5687f6fbaa800537e7dcbe"};
+const firebaseConfig={apiKey:"AIzaSyD9pzCYXVbxvWpoUdyncL9INdmgonqxpWo",authDomain:"ten-pd.firebaseapp.com",projectId:"ten-pd",storageBucket:"ten-pd.firebasestorage.app",messagingSenderId:"857247512307",appId:"1:857247512307:web:345cab89c34577a9c3e986"};
 const app=initializeApp(firebaseConfig),db=getFirestore(app),auth=getAuth(app),provider=new GoogleAuthProvider();
 let unsubscribe=null;
 function setSyncStatus(s,m){document.getElementById('syncDot').className='sync-dot '+s;document.getElementById('syncStatus').textContent=m;}

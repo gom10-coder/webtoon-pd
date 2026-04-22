@@ -1540,7 +1540,7 @@ function saveInlineMemo(wId){
   const input=document.getElementById('memo-input-'+wId);
   if(!view||!input)return;
   const w=works.find(w=>w.id===wId);
-  if(w){const content=input.value.trim();w.memo=content?`[${todayStr()}]\n${content}`:'`;}
+  if(w){const content=input.value.trim();w.memo=content?`[${todayStr()}]\n${content}`:'';}
   saveData();
   const memoRaw=(w?.memo||'').replace(/^\[\d{4}-\d{2}-\d{2}\]\n?/,'');
   view.innerHTML=memoRaw?memoRaw.replace(/\n/g,'<br>'):'<span class="memo-empty">편집 방향, 작가 성향, 담당자 정보 등을 메모해두세요</span>';
@@ -1568,7 +1568,7 @@ function openMemoModal(wId,e){
 }
 function saveMemo(){
   const w=works.find(w=>w.id===memoTargetWorkId);
-  if(w){const content=document.getElementById('mm-content').value.trim();w.memo=content?`[${todayStr()}]\n${content}`:'`;}
+  if(w){const content=document.getElementById('mm-content').value.trim();w.memo=content?`[${todayStr()}]\n${content}`:'';}
   saveData();closeModal('memoModal');render();showToast('메모를 저장했어요');
 }
 
